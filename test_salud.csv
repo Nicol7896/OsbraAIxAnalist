@@ -1,0 +1,6 @@
+ID,Nombre,Edad,Comentario,Categoria,Urgencia,Fecha
+1,María,35,El hospital no tiene medicamentos para diabetes,Salud,Urgente,2024-01-15
+2,Juan,28,Necesitamos más doctores especialistas,Salud,No urgente,2024-01-16
+3,Ana,45,La clínica está muy lejos de mi casa,Salud,Urgente,2024-01-17
+4,Carlos,52,No hay ambulancia disponible,Salud,Urgente,2024-01-18
+5,Laura,31,Los medicamentos son muy caros,Salud,No urgente,2024-01-19

@@ -180,7 +180,21 @@ async function startAnalysis(file) {
         
     } catch (error) {
         console.error('❌ Error en análisis:', error);
-        showError('Error procesando el archivo: ' + error.message);
+        
+        // Determinar el tipo de error y mostrar mensaje apropiado
+        let errorMessage = 'Error procesando el archivo';
+        
+        if (error.message.includes('500')) {
+            errorMessage = 'Error interno del servidor. Verifique que el archivo no esté corrupto y tenga el formato correcto.';
+        } else if (error.message.includes('400')) {
+            errorMessage = 'Formato de archivo no válido. Use archivos CSV o Excel (.xlsx, .xls).';
+        } else if (error.message.includes('413')) {
+            errorMessage = 'El archivo es demasiado grande. Máximo 50MB.';
+        } else {
+            errorMessage = `Error: ${error.message}`;
+        }
+        
+        showError(errorMessage);
         hideProgress();
     }
 }
@@ -419,18 +433,33 @@ function showError(message) {
         errorDiv = document.createElement('div');
         errorDiv.id = 'error-message';
         errorDiv.className = 'alert alert-danger mt-3';
-        document.querySelector('.upload-container').appendChild(errorDiv);
+        errorDiv.style.position = 'fixed';
+        errorDiv.style.top = '20px';
+        errorDiv.style.left = '50%';
+        errorDiv.style.transform = 'translateX(-50%)';
+        errorDiv.style.zIndex = '9999';
+        errorDiv.style.minWidth = '400px';
+        errorDiv.style.maxWidth = '80%';
+        document.body.appendChild(errorDiv);
     }
     
     errorDiv.innerHTML = `
-        <i class="fas fa-exclamation-triangle"></i> ${message}
+        <div class="d-flex align-items-center">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <div>
+                <strong>Error:</strong> ${message}
+            </div>
+            <button type="button" class="btn-close ms-auto" onclick="this.parentElement.parentElement.style.display='none'"></button>
+        </div>
     `;
     errorDiv.style.display = 'block';
     
-    // Ocultar después de 5 segundos
+    // Ocultar después de 8 segundos
     setTimeout(() => {
-        errorDiv.style.display = 'none';
-    }, 5000);
+        if (errorDiv) {
+            errorDiv.style.display = 'none';
+        }
+    }, 8000);
 }
 
 /**
