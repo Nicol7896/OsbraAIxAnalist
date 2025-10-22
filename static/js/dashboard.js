@@ -409,9 +409,124 @@ async function applyFilters() {
         return;
     }
     
-    // Aquí puedes implementar la lógica de filtrado
-    // Por ahora, recargamos todos los datos
-    await loadDashboardData();
+    // Mostrar indicador de carga
+    showLoadingState();
+    
+    try {
+        // Cargar datos filtrados
+        await loadFilteredData(categoria, urgencia, fechaInicio, fechaFin);
+        console.log('✅ Filtros aplicados exitosamente');
+        
+        // Mostrar estado de filtros activos si hay filtros aplicados
+        if (hasActiveFilters()) {
+            showFilterStatus();
+        } else {
+            hideFilterStatus();
+        }
+    } catch (error) {
+        console.error('❌ Error aplicando filtros:', error);
+        showError('Error aplicando filtros');
+    } finally {
+        hideLoadingState();
+    }
+}
+
+/**
+ * Cargar datos filtrados
+ */
+async function loadFilteredData(categoria, urgencia, fechaInicio, fechaFin) {
+    try {
+        // Construir URL con parámetros de filtro
+        const params = new URLSearchParams();
+        if (categoria) params.append('categoria', categoria);
+        if (urgencia) params.append('urgencia', urgencia);
+        if (fechaInicio) params.append('fecha_inicio', fechaInicio);
+        if (fechaFin) params.append('fecha_fin', fechaFin);
+        
+        const baseUrl = '/api/filtered-metrics';
+        const url = params.toString() ? `${baseUrl}?${params.toString()}` : baseUrl;
+        
+        console.log('🔄 Cargando métricas filtradas...');
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            const metrics = data.data;
+            console.log('✅ Métricas filtradas recibidas:', metrics);
+            
+            // Actualizar métricas en el dashboard
+            document.getElementById('total-casos').textContent = formatNumber(metrics.total_casos || 0);
+            document.getElementById('casos-urgentes').textContent = formatNumber(metrics.casos_urgentes || 0);
+            document.getElementById('porcentaje-urgentes').textContent = `${metrics.porcentaje_urgentes || 0}%`;
+            document.getElementById('zona-rural').textContent = formatNumber(metrics.zona_rural || 0);
+            document.getElementById('porcentaje-rural').textContent = `${metrics.porcentaje_rural || 0}%`;
+            document.getElementById('sin-internet').textContent = formatNumber(metrics.sin_internet || 0);
+            document.getElementById('porcentaje-sin-internet').textContent = `${metrics.porcentaje_sin_internet || 0}%`;
+            
+            // Cargar casos prioritarios filtrados
+            await loadFilteredPriorityCases(categoria, urgencia, fechaInicio, fechaFin);
+            
+        } else {
+            throw new Error(data.error || 'Error desconocido en métricas filtradas');
+        }
+    } catch (error) {
+        console.error('Error cargando datos filtrados:', error);
+        throw error;
+    }
+}
+
+/**
+ * Cargar casos prioritarios filtrados
+ */
+async function loadFilteredPriorityCases(categoria, urgencia, fechaInicio, fechaFin) {
+    try {
+        // Construir URL con parámetros de filtro
+        const params = new URLSearchParams();
+        if (categoria) params.append('categoria', categoria);
+        if (urgencia) params.append('urgencia', urgencia);
+        if (fechaInicio) params.append('fecha_inicio', fechaInicio);
+        if (fechaFin) params.append('fecha_fin', fechaFin);
+        params.append('limit', '20');
+        
+        const baseUrl = '/api/filtered-priority-cases';
+        const url = params.toString() ? `${baseUrl}?${params.toString()}` : baseUrl;
+        
+        console.log('🔄 Cargando casos prioritarios filtrados...');
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            const cases = data.data;
+            console.log('✅ Casos prioritarios filtrados recibidos:', cases.length, 'registros');
+            
+            // Actualizar lista de casos prioritarios
+            updatePriorityCasesList(cases);
+            
+            // Actualizar tabla
+            updatePriorityTable(cases);
+            
+        } else {
+            throw new Error(data.error || 'Error desconocido en casos prioritarios filtrados');
+        }
+    } catch (error) {
+        console.error('Error cargando casos prioritarios filtrados:', error);
+        // Mostrar mensaje de error en las tablas
+        const container = document.getElementById('priority-cases');
+        container.innerHTML = '<div class="error-message">Error cargando casos prioritarios filtrados</div>';
+        
+        const tbody = document.getElementById('priority-table');
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center error-message">Error cargando datos filtrados</td></tr>';
+    }
 }
 
 /**
@@ -479,8 +594,53 @@ function clearFilters() {
     document.getElementById('filter-fecha-inicio').value = '';
     document.getElementById('filter-fecha-fin').value = '';
     
+    console.log('🧹 Limpiando filtros y recargando datos...');
+    
+    // Ocultar indicador de filtros activos
+    hideFilterStatus();
+    
+    // Mostrar indicador de carga
+    showLoadingState();
+    
     // Recargar datos sin filtros
-    loadDashboardData();
+    loadDashboardData().finally(() => {
+        hideLoadingState();
+        console.log('✅ Filtros limpiados y datos recargados');
+    });
+}
+
+/**
+ * Mostrar estado de filtros activos
+ */
+function showFilterStatus() {
+    const filterStatus = document.getElementById('filter-status');
+    if (filterStatus) {
+        filterStatus.style.display = 'block';
+        filterStatus.className = 'badge bg-primary';
+        filterStatus.innerHTML = '<i class="fas fa-filter"></i> Filtros activos';
+    }
+}
+
+/**
+ * Ocultar estado de filtros activos
+ */
+function hideFilterStatus() {
+    const filterStatus = document.getElementById('filter-status');
+    if (filterStatus) {
+        filterStatus.style.display = 'none';
+    }
+}
+
+/**
+ * Verificar si hay filtros activos
+ */
+function hasActiveFilters() {
+    const categoria = document.getElementById('filter-categoria').value;
+    const urgencia = document.getElementById('filter-urgencia').value;
+    const fechaInicio = document.getElementById('filter-fecha-inicio').value;
+    const fechaFin = document.getElementById('filter-fecha-fin').value;
+    
+    return categoria || urgencia || fechaInicio || fechaFin;
 }
 
 /**

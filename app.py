@@ -281,6 +281,11 @@ def dashboard():
     """Página principal del dashboard"""
     return render_template('dashboard.html')
 
+@app.route('/favicon.ico')
+def favicon():
+    """Favicon del sitio"""
+    return app.send_static_file('img/logo.png')
+
 @app.route('/api/metrics')
 def api_metrics():
     """API para obtener métricas del dashboard"""
@@ -376,6 +381,8 @@ def api_filtered_data():
         fecha_inicio = request.args.get('fecha_inicio', '')
         fecha_fin = request.args.get('fecha_fin', '')
         
+        print(f"📊 Aplicando filtros: categoria={categoria}, urgencia={urgencia}, fecha_inicio={fecha_inicio}, fecha_fin={fecha_fin}")
+        
         # Validar fechas
         if not validate_date_range(fecha_inicio, fecha_fin):
             return jsonify({
@@ -388,21 +395,32 @@ def api_filtered_data():
         
         if categoria:
             filtered_df = filtered_df[filtered_df['Categoría del problema'] == categoria]
+            print(f"✅ Filtro por categoría aplicado: {len(filtered_df)} registros")
         
         if urgencia:
             filtered_df = filtered_df[filtered_df['Nivel de urgencia'] == urgencia]
+            print(f"✅ Filtro por urgencia aplicado: {len(filtered_df)} registros")
         
         if fecha_inicio:
             filtered_df = filtered_df[pd.to_datetime(filtered_df['Fecha del reporte']) >= fecha_inicio]
+            print(f"✅ Filtro por fecha inicio aplicado: {len(filtered_df)} registros")
         
         if fecha_fin:
             filtered_df = filtered_df[pd.to_datetime(filtered_df['Fecha del reporte']) <= fecha_fin]
+            print(f"✅ Filtro por fecha fin aplicado: {len(filtered_df)} registros")
+        
+        # Limpiar datos para JSON
+        cleaned_data = analyzer.clean_data_for_json(filtered_df.to_dict('records'))
+        
+        print(f"✅ Datos filtrados devueltos: {len(cleaned_data)} registros")
         
         return jsonify({
             'success': True,
-            'data': filtered_df.to_dict('records')
+            'data': cleaned_data,
+            'total_records': len(cleaned_data)
         })
     except Exception as e:
+        print(f"❌ Error en api_filtered_data: {e}")
         return jsonify({
             'success': False,
             'error': str(e)
@@ -433,6 +451,129 @@ def validate_date_range(fecha_inicio, fecha_fin):
         return True
     except:
         return False
+
+@app.route('/api/filtered-metrics')
+def api_filtered_metrics():
+    """API para métricas filtradas"""
+    try:
+        # Obtener parámetros de filtro
+        categoria = request.args.get('categoria', '')
+        urgencia = request.args.get('urgencia', '')
+        fecha_inicio = request.args.get('fecha_inicio', '')
+        fecha_fin = request.args.get('fecha_fin', '')
+        
+        print(f"📊 Obteniendo métricas filtradas: categoria={categoria}, urgencia={urgencia}")
+        
+        # Validar fechas
+        if not validate_date_range(fecha_inicio, fecha_fin):
+            return jsonify({
+                'success': False,
+                'error': 'Rango de fechas inválido. Las fechas deben estar entre 2020 y 2025'
+            }), 400
+        
+        # Aplicar filtros
+        filtered_df = analyzer.df.copy()
+        
+        if categoria:
+            filtered_df = filtered_df[filtered_df['Categoría del problema'] == categoria]
+        
+        if urgencia:
+            filtered_df = filtered_df[filtered_df['Nivel de urgencia'] == urgencia]
+        
+        if fecha_inicio:
+            filtered_df = filtered_df[pd.to_datetime(filtered_df['Fecha del reporte']) >= fecha_inicio]
+        
+        if fecha_fin:
+            filtered_df = filtered_df[pd.to_datetime(filtered_df['Fecha del reporte']) <= fecha_fin]
+        
+        # Calcular métricas filtradas
+        total_casos = len(filtered_df)
+        casos_urgentes = len(filtered_df[filtered_df['Nivel de urgencia'] == 'Urgente'])
+        zona_rural = len(filtered_df[filtered_df['Zona rural'] == 1])
+        sin_internet = len(filtered_df[filtered_df['Acceso a internet'] == 0])
+        
+        metrics = {
+            'total_casos': total_casos,
+            'casos_urgentes': casos_urgentes,
+            'porcentaje_urgentes': round((casos_urgentes / total_casos) * 100, 1) if total_casos > 0 else 0,
+            'zona_rural': zona_rural,
+            'porcentaje_rural': round((zona_rural / total_casos) * 100, 1) if total_casos > 0 else 0,
+            'sin_internet': sin_internet,
+            'porcentaje_sin_internet': round((sin_internet / total_casos) * 100, 1) if total_casos > 0 else 0
+        }
+        
+        print(f"✅ Métricas filtradas calculadas: {metrics}")
+        
+        return jsonify({
+            'success': True,
+            'data': metrics
+        })
+    except Exception as e:
+        print(f"❌ Error en api_filtered_metrics: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/filtered-priority-cases')
+def api_filtered_priority_cases():
+    """API para casos prioritarios filtrados"""
+    try:
+        # Obtener parámetros de filtro
+        categoria = request.args.get('categoria', '')
+        urgencia = request.args.get('urgencia', '')
+        fecha_inicio = request.args.get('fecha_inicio', '')
+        fecha_fin = request.args.get('fecha_fin', '')
+        limit = request.args.get('limit', 20, type=int)
+        
+        print(f"📊 Obteniendo casos prioritarios filtrados: categoria={categoria}, urgencia={urgencia}")
+        
+        # Validar fechas
+        if not validate_date_range(fecha_inicio, fecha_fin):
+            return jsonify({
+                'success': False,
+                'error': 'Rango de fechas inválido. Las fechas deben estar entre 2020 y 2025'
+            }), 400
+        
+        # Aplicar filtros
+        filtered_df = analyzer.df.copy()
+        
+        if categoria:
+            filtered_df = filtered_df[filtered_df['Categoría del problema'] == categoria]
+        
+        if urgencia:
+            filtered_df = filtered_df[filtered_df['Nivel de urgencia'] == urgencia]
+        
+        if fecha_inicio:
+            filtered_df = filtered_df[pd.to_datetime(filtered_df['Fecha del reporte']) >= fecha_inicio]
+        
+        if fecha_fin:
+            filtered_df = filtered_df[pd.to_datetime(filtered_df['Fecha del reporte']) <= fecha_fin]
+        
+        # Verificar si existe la columna Prioridad, si no, calcularla
+        if 'Prioridad' not in filtered_df.columns:
+            print("⚠️ Columna Prioridad no encontrada, calculando...")
+            filtered_df['Prioridad'] = analyzer.calculate_priority()
+        
+        # Ordenar por prioridad descendente
+        sorted_df = filtered_df.sort_values('Prioridad', ascending=False)
+        result = sorted_df.head(limit).to_dict('records')
+        
+        # Limpiar datos para JSON
+        cleaned_result = analyzer.clean_data_for_json(result)
+        
+        print(f"✅ Casos prioritarios filtrados devueltos: {len(cleaned_result)} registros")
+        
+        return jsonify({
+            'success': True,
+            'data': cleaned_result
+        })
+    except Exception as e:
+        print(f"❌ Error en api_filtered_priority_cases: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 if __name__ == '__main__':
     import os

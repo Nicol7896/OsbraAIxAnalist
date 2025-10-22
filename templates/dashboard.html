@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🚀 Sistema de Análisis Inteligente - Reto IBM SenaSoft 2025</title>
+    <title>Orion - Sistema de Análisis Inteligente</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/logo.png') }}">
     
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -57,6 +58,19 @@
         .navbar-brand {
             font-weight: bold;
             font-size: 1.5rem;
+            transition: transform 0.3s ease;
+        }
+        
+        .navbar-brand:hover {
+            transform: scale(1.05);
+        }
+        
+        .navbar-brand img {
+            transition: transform 0.3s ease;
+        }
+        
+        .navbar-brand:hover img {
+            transform: rotate(5deg);
         }
         
         .filter-section {
@@ -105,18 +119,42 @@
             border-radius: 5px;
             margin: 10px 0;
         }
+        
+        /* Estilos para Orion */
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+        }
+        
+        .navbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        
+        .navbar-brand {
+            color: white !important;
+        }
+        
+        .navbar-text {
+            color: rgba(255,255,255,0.8) !important;
+        }
+        
+        .container-fluid {
+            background: transparent;
+        }
     </style>
 </head>
 <body>
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container-fluid">
-            <a class="navbar-brand" href="#">
-                <i class="fas fa-brain"></i> Sistema de Análisis Inteligente
+            <a class="navbar-brand d-flex align-items-center" href="#">
+                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Orion" class="me-3" style="height: 40px; width: auto;">
+                <span class="fw-bold fs-4">Orion</span>
             </a>
             <div class="navbar-nav ms-auto">
                 <span class="navbar-text">
-                    <i class="fas fa-robot"></i> Powered by HuggingFace Transformers
+                    <i class="fas fa-chart-line"></i> Sistema de Análisis Inteligente
                 </span>
             </div>
         </div>
@@ -125,7 +163,12 @@
     <div class="container-fluid mt-4">
         <!-- Filtros -->
         <div class="filter-section">
-            <h5><i class="fas fa-filter"></i> Filtros de Análisis</h5>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5><i class="fas fa-filter"></i> Filtros de Análisis</h5>
+                <div id="filter-status" class="badge bg-secondary" style="display: none;">
+                    <i class="fas fa-info-circle"></i> Filtros activos
+                </div>
+            </div>
             <div class="row">
                 <div class="col-md-3">
                     <label class="form-label">Categoría</label>

@@ -1,7 +1,7 @@
-# 🚀 Sistema de Análisis Inteligente
+# 🌟 Orion - Sistema de Análisis Inteligente
 ## Reto IBM SenaSoft 2025
 
-Sistema integral que combina **Inteligencia Artificial** con **visualización web** para analizar y priorizar reportes ciudadanos automáticamente.
+**Orion** es un sistema integral que combina **Inteligencia Artificial** con **visualización web** para analizar y priorizar reportes ciudadanos automáticamente. Diseñado con una identidad visual única y moderna.
 
 ## 🎯 **Características**
 
@@ -9,8 +9,9 @@ Sistema integral que combina **Inteligencia Artificial** con **visualización we
 - 😊 **Análisis de sentimientos** multilingüe
 - ⚡ **Determinación inteligente** de urgencia
 - 📊 **Sistema de priorización** (0-100)
-- 📈 **Dashboard interactivo** responsive
+- 📈 **Dashboard interactivo** responsive con branding personalizado
 - 🔍 **Filtros avanzados** para análisis
+- 🎨 **Identidad visual única** con logo y colores corporativos
 
 ## 🚀 **Despliegue en Railway**
 
@@ -64,4 +65,4 @@ Este proyecto está optimizado para desplegarse automáticamente en Railway.
 
 ---
 
-*Sistema de Análisis Inteligente - Reto IBM SenaSoft 2025* 🚀
+*Orion - Sistema de Análisis Inteligente - Reto IBM SenaSoft 2025* 🌟
