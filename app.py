@@ -159,20 +159,24 @@ class DataAnalyzer:
             sorted_df = self.df.sort_values('Prioridad', ascending=False)
             result = sorted_df.head(limit).to_dict('records')
             
-            # Asegurar que todos los registros tengan la columna Prioridad
-            for record in result:
-                if 'Prioridad' not in record:
-                    record['Prioridad'] = 50  # Valor por defecto
+            # Limpiar datos para JSON
+            cleaned_result = self.clean_data_for_json(result)
             
-            return result
+            # Asegurar que todos los registros tengan la columna Prioridad
+            for record in cleaned_result:
+                if 'Prioridad' not in record:
+                    record['Prioridad'] = 50
+            
+            return cleaned_result
         except Exception as e:
             print(f"❌ Error en get_priority_cases: {e}")
             # Si hay error, devolver los primeros registros con prioridad por defecto
             try:
                 records = self.df.head(limit).to_dict('records')
-                for record in records:
-                    record['Prioridad'] = 50  # Valor por defecto
-                return records
+                cleaned_records = self.clean_data_for_json(records)
+                for record in cleaned_records:
+                    record['Prioridad'] = 50
+                return cleaned_records
             except:
                 # Último recurso: datos de ejemplo
                 return self._get_fallback_priority_cases(limit)
@@ -197,6 +201,43 @@ class DataAnalyzer:
             })
         
         return cases
+    
+    def clean_data_for_json(self, data):
+        """Limpiar datos para serialización JSON"""
+        if isinstance(data, list):
+            cleaned_list = []
+            for item in data:
+                if isinstance(item, dict):
+                    cleaned_item = {}
+                    for key, value in item.items():
+                        if pd.isna(value):
+                            if key in ['Edad']:
+                                cleaned_item[key] = None
+                            elif key in ['Zona rural', 'Acceso a internet', 'Atención previa del gobierno']:
+                                cleaned_item[key] = 0
+                            else:
+                                cleaned_item[key] = ""
+                        else:
+                            cleaned_item[key] = value
+                    cleaned_list.append(cleaned_item)
+                else:
+                    cleaned_list.append(item)
+            return cleaned_list
+        elif isinstance(data, dict):
+            cleaned_dict = {}
+            for key, value in data.items():
+                if pd.isna(value):
+                    if key in ['Edad']:
+                        cleaned_dict[key] = None
+                    elif key in ['Zona rural', 'Acceso a internet', 'Atención previa del gobierno']:
+                        cleaned_dict[key] = 0
+                    else:
+                        cleaned_dict[key] = ""
+                else:
+                    cleaned_dict[key] = value
+            return cleaned_dict
+        else:
+            return data
     
     def get_temporal_trends(self):
         """Obtener tendencias temporales"""
