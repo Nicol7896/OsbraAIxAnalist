@@ -127,16 +127,96 @@
         }
         
         .navbar {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #667eea 100%) !important;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+            border-bottom: 3px solid rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        .navbar::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, rgba(255,255,255,0.1) 0%, transparent 50%, rgba(255,255,255,0.05) 100%);
+            pointer-events: none;
         }
         
         .navbar-brand {
             color: white !important;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+        
+        .navbar-brand img {
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+            transition: all 0.3s ease;
+        }
+        
+        .navbar-brand:hover img {
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4)) brightness(1.1);
         }
         
         .navbar-text {
-            color: rgba(255,255,255,0.8) !important;
+            color: rgba(255,255,255,0.9) !important;
+            font-weight: 500;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+        
+        .navbar-nav .nav-link {
+            color: rgba(255,255,255,0.9) !important;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border-radius: 8px;
+            padding: 8px 16px !important;
+            margin: 0 4px;
+        }
+        
+        .navbar-nav .nav-link:hover {
+            color: white !important;
+            background: rgba(255,255,255,0.15);
+            transform: translateY(-1px);
+        }
+        
+        .navbar-nav .nav-link.active {
+            background: rgba(255,255,255,0.2);
+            color: white !important;
+        }
+        
+        .navbar-toggler {
+            border: none;
+            padding: 4px 8px;
+        }
+        
+        .navbar-toggler:focus {
+            box-shadow: 0 0 0 0.2rem rgba(255,255,255,0.25);
+        }
+        
+        .navbar-toggler-icon {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28255, 255, 255, 0.85%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+        }
+        
+        /* Efecto de partículas sutiles en el navbar */
+        .navbar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 20%, rgba(255,255,255,0.05) 0%, transparent 50%),
+                        radial-gradient(circle at 40% 80%, rgba(255,255,255,0.08) 0%, transparent 50%);
+            pointer-events: none;
+            animation: float 6s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
         }
         
         .container-fluid {
@@ -158,20 +238,111 @@
         .chart-container {
             position: relative;
         }
+        
+        /* Mejoras para móviles */
+        @media (max-width: 768px) {
+            .chart-container {
+                padding: 15px;
+                margin-bottom: 15px;
+            }
+            
+            .chart-container h5 {
+                font-size: 1.1rem;
+                margin-bottom: 15px;
+            }
+            
+            .chart-container canvas {
+                max-height: 250px !important;
+            }
+            
+            #temporalChart {
+                max-height: 250px !important;
+            }
+            
+            .metric-card {
+                padding: 15px;
+                margin-bottom: 15px;
+            }
+            
+            .metric-card h3 {
+                font-size: 1.5rem;
+            }
+            
+            .filter-section {
+                padding: 15px;
+            }
+            
+            .filter-section .row {
+                margin-bottom: 10px;
+            }
+            
+            .filter-section .col-md-3 {
+                margin-bottom: 10px;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .chart-container {
+                padding: 10px;
+            }
+            
+            .chart-container canvas {
+                max-height: 200px !important;
+            }
+            
+            #temporalChart {
+                max-height: 200px !important;
+            }
+            
+            .metric-card h3 {
+                font-size: 1.3rem;
+            }
+            
+            .navbar-brand {
+                font-size: 1.2rem;
+            }
+            
+            .navbar-brand small {
+                font-size: 0.7rem;
+            }
+        }
     </style>
 </head>
 <body>
     <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container-fluid">
-            <a class="navbar-brand d-flex align-items-center" href="#">
-                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Orion" class="me-3" style="height: 40px; width: auto;">
-                <span class="fw-bold fs-4">Orion</span>
+            <a class="navbar-brand d-flex align-items-center" href="/">
+                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Orion" class="me-3" style="height: 45px; width: auto;">
+                <div>
+                    <span class="fw-bold fs-4 d-block">Orion</span>
+                    <small class="opacity-75">Análisis Inteligente</small>
+                </div>
             </a>
-            <div class="navbar-nav ms-auto">
-                <span class="navbar-text">
-                    <i class="fas fa-chart-line"></i> Sistema de Análisis Inteligente
-                </span>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">
+                            <i class="fas fa-chart-line me-2"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/upload">
+                            <i class="fas fa-upload me-2"></i>Análisis Personalizado
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <span class="navbar-text d-flex align-items-center">
+                            <i class="fas fa-brain me-2"></i>
+                            <span>Powered by AI</span>
+                        </span>
+                    </li>
+                </ul>
             </div>
         </div>
     </nav>
@@ -299,8 +470,8 @@
         <div class="row">
             <div class="col-md-8">
                 <div class="chart-container">
-                    <h5><i class="fas fa-chart-line"></i> Tendencias Temporales</h5>
-                    <div id="temporalChart" style="height: 400px;"></div>
+                    <h5><i class="fas fa-chart-bar"></i> Reportes por Mes</h5>
+                    <canvas id="temporalChart" width="400" height="300"></canvas>
                 </div>
             </div>
             <div class="col-md-4">

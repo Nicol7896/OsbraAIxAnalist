@@ -180,7 +180,7 @@ async function loadUrgencyChart() {
                 data: {
                     labels: chartData.labels,
                     datasets: [{
-                        label: 'Número de Casos',
+                        label: `Total: ${formatNumber(chartData.values.reduce((sum, value) => sum + value, 0))} casos`,
                         data: chartData.values,
                         backgroundColor: [
                             colors.danger,
@@ -225,45 +225,95 @@ async function loadTemporalChart() {
         if (data.success && data.data.months && data.data.months.length > 0) {
             const chartData = data.data;
             
-            const plotData = [{
-                x: chartData.months,
-                y: chartData.counts,
-                type: 'scatter',
-                mode: 'lines+markers',
-                name: 'Reportes por Mes',
-                line: {
-                    color: colors.primary,
-                    width: 3
-                },
-                marker: {
-                    color: colors.primary,
-                    size: 8
-                }
-            }];
-            
-            const layout = {
-                title: {
-                    text: 'Tendencias Mensuales',
-                    font: { size: 16 }
-                },
-                xaxis: {
-                    title: 'Mes'
-                },
-                yaxis: {
-                    title: 'Número de Reportes'
-                },
-                margin: { t: 50, r: 50, b: 50, l: 50 },
-                height: 400,
-                autosize: true
-            };
-            
-            const config = {
+        // Crear gráfico de barras más amigable para móviles
+        const ctx = document.getElementById('temporalChart').getContext('2d');
+        
+        // Destruir gráfico anterior si existe
+        if (window.temporalChart) {
+            window.temporalChart.destroy();
+        }
+        
+        window.temporalChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: chartData.months,
+                datasets: [{
+                    label: 'Reportes por Mes',
+                    data: chartData.counts,
+                    backgroundColor: chartData.counts.map((_, index) => {
+                        const colors_array = [colors.primary, colors.success, colors.warning, colors.danger, colors.info];
+                        return colors_array[index % colors_array.length];
+                    }),
+                    borderColor: chartData.counts.map((_, index) => {
+                        const colors_array = [colors.primary, colors.success, colors.warning, colors.danger, colors.info];
+                        return colors_array[index % colors_array.length];
+                    }),
+                    borderWidth: 2,
+                    borderRadius: 8,
+                    borderSkipped: false,
+                }]
+            },
+            options: {
                 responsive: true,
-                displayModeBar: true,
-                displaylogo: false
-            };
-            
-            Plotly.newPlot('temporalChart', plotData, layout, config);
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0,0,0,0.8)',
+                        titleColor: 'white',
+                        bodyColor: 'white',
+                        borderColor: colors.primary,
+                        borderWidth: 1,
+                        cornerRadius: 8,
+                        displayColors: true
+                    }
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Mes',
+                            font: {
+                                size: 14,
+                                weight: 'bold'
+                            }
+                        },
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            maxRotation: 45,
+                            minRotation: 0
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Número de Reportes',
+                            font: {
+                                size: 14,
+                                weight: 'bold'
+                            }
+                        },
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(0,0,0,0.1)'
+                        }
+                    }
+                },
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
+                animation: {
+                    duration: 1000,
+                    easing: 'easeInOutQuart'
+                }
+            }
+        });
         } else {
             throw new Error('No hay datos temporales disponibles');
         }
@@ -702,7 +752,7 @@ async function loadFilteredUrgencyChart(params) {
                 data: {
                     labels: chartData.labels,
                     datasets: [{
-                        label: 'Número de Casos',
+                        label: `Total: ${formatNumber(chartData.values.reduce((sum, value) => sum + value, 0))} casos`,
                         data: chartData.values,
                         backgroundColor: [
                             colors.danger,
@@ -750,45 +800,95 @@ async function loadFilteredTemporalChart(params) {
         if (data.success && data.data.months && data.data.months.length > 0) {
             const chartData = data.data;
             
-            const plotData = [{
-                x: chartData.months,
-                y: chartData.counts,
-                type: 'scatter',
-                mode: 'lines+markers',
-                name: 'Reportes por Mes',
-                line: {
-                    color: colors.primary,
-                    width: 3
+            // Crear gráfico de barras filtrado más amigable para móviles
+            const ctx = document.getElementById('temporalChart').getContext('2d');
+            
+            // Destruir gráfico anterior si existe
+            if (window.temporalChart) {
+                window.temporalChart.destroy();
+            }
+            
+            window.temporalChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: chartData.months,
+                    datasets: [{
+                        label: 'Reportes por Mes (Filtrados)',
+                        data: chartData.counts,
+                        backgroundColor: chartData.counts.map((_, index) => {
+                            const colors_array = [colors.primary, colors.success, colors.warning, colors.danger, colors.info];
+                            return colors_array[index % colors_array.length];
+                        }),
+                        borderColor: chartData.counts.map((_, index) => {
+                            const colors_array = [colors.primary, colors.success, colors.warning, colors.danger, colors.info];
+                            return colors_array[index % colors_array.length];
+                        }),
+                        borderWidth: 2,
+                        borderRadius: 8,
+                        borderSkipped: false,
+                    }]
                 },
-                marker: {
-                    color: colors.primary,
-                    size: 8
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0,0,0,0.8)',
+                            titleColor: 'white',
+                            bodyColor: 'white',
+                            borderColor: colors.primary,
+                            borderWidth: 1,
+                            cornerRadius: 8,
+                            displayColors: true
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Mes',
+                                font: {
+                                    size: 14,
+                                    weight: 'bold'
+                                }
+                            },
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                maxRotation: 45,
+                                minRotation: 0
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Número de Reportes',
+                                font: {
+                                    size: 14,
+                                    weight: 'bold'
+                                }
+                            },
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(0,0,0,0.1)'
+                            }
+                        }
+                    },
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
+                    animation: {
+                        duration: 1000,
+                        easing: 'easeInOutQuart'
+                    }
                 }
-            }];
-            
-            const layout = {
-                title: {
-                    text: 'Tendencias Mensuales (Filtradas)',
-                    font: { size: 16 }
-                },
-                xaxis: {
-                    title: 'Mes'
-                },
-                yaxis: {
-                    title: 'Número de Reportes'
-                },
-                margin: { t: 50, r: 50, b: 50, l: 50 },
-                height: 400,
-                autosize: true
-            };
-            
-            const config = {
-                responsive: true,
-                displayModeBar: true,
-                displaylogo: false
-            };
-            
-            Plotly.newPlot('temporalChart', plotData, layout, config);
+            });
             
             console.log('✅ Gráfico temporal filtrado actualizado');
         } else {
