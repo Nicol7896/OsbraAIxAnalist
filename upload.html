@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orion - Análisis Personalizado</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/logo.png') }}">
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+        }
+        
+        .navbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        
+        .navbar-brand {
+            color: white !important;
+            transition: transform 0.3s ease;
+        }
+        
+        .navbar-brand:hover {
+            transform: scale(1.05);
+        }
+        
+        .navbar-brand img {
+            transition: transform 0.3s ease;
+        }
+        
+        .navbar-brand:hover img {
+            transform: rotate(5deg);
+        }
+        
+        .upload-container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            margin: 40px 0;
+        }
+        
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 60px 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .upload-area:hover {
+            border-color: #764ba2;
+            background-color: #f8f9ff;
+        }
+        
+        .upload-area.dragover {
+            border-color: #28a745;
+            background-color: #d4edda;
+        }
+        
+        .upload-icon {
+            font-size: 4rem;
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+        
+        .feature-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            transition: transform 0.3s ease;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .feature-icon {
+            font-size: 2.5rem;
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+        
+        .progress-container {
+            display: none;
+            margin-top: 20px;
+        }
+        
+        .analysis-preview {
+            display: none;
+            margin-top: 30px;
+        }
+        
+        .metric-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+        
+        .btn-custom {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-custom:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand d-flex align-items-center" href="/">
+                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Orion" class="me-3" style="height: 40px; width: auto;">
+                <span class="fw-bold fs-4">Orion</span>
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/">
+                    <i class="fas fa-chart-line"></i> Dashboard
+                </a>
+                <a class="nav-link active" href="/upload">
+                    <i class="fas fa-upload"></i> Análisis Personalizado
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Panel de Carga -->
+            <div class="col-lg-8">
+                <div class="upload-container">
+                    <h2 class="text-center mb-4">
+                        <i class="fas fa-upload text-primary"></i> 
+                        Análisis Personalizado con Orion
+                    </h2>
+                    
+                    <div class="upload-area" id="uploadArea">
+                        <div class="upload-icon">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                        </div>
+                        <h4>Arrastra tu dataset aquí</h4>
+                        <p class="text-muted">o haz clic para seleccionar un archivo</p>
+                        <p class="small text-muted">
+                            Formatos soportados: CSV, Excel (.xlsx, .xls)
+                        </p>
+                        <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" style="display: none;">
+                    </div>
+                    
+                    <div class="progress-container" id="progressContainer">
+                        <div class="progress mb-3">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                 role="progressbar" style="width: 0%"></div>
+                        </div>
+                        <p class="text-center" id="progressText">Procesando archivo...</p>
+                    </div>
+                    
+                    <div class="analysis-preview" id="analysisPreview">
+                        <h4 class="mb-3">
+                            <i class="fas fa-chart-bar text-success"></i> 
+                            Análisis Completado
+                        </h4>
+                        <div class="row" id="previewMetrics">
+                            <!-- Métricas se cargarán aquí dinámicamente -->
+                        </div>
+                        <div class="text-center mt-4">
+                            <button class="btn btn-custom btn-lg" onclick="generateFullReport()">
+                                <i class="fas fa-file-alt"></i> Generar Informe Completo
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Panel de Características -->
+            <div class="col-lg-4">
+                <h4 class="mb-4">
+                    <i class="fas fa-star text-warning"></i> 
+                    Características del Servicio
+                </h4>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <h5>Análisis con IA</h5>
+                    <p class="text-muted">
+                        Clasificación automática y análisis de sentimientos 
+                        usando modelos HuggingFace Transformers.
+                    </p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <h5>Visualizaciones</h5>
+                    <p class="text-muted">
+                        Gráficos interactivos y dashboards personalizados 
+                        para tus datos específicos.
+                    </p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-filter"></i>
+                    </div>
+                    <h5>Filtros Avanzados</h5>
+                    <p class="text-muted">
+                        Sistema de filtrado por categorías, fechas y 
+                        criterios personalizados.
+                    </p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-download"></i>
+                    </div>
+                    <h5>Exportación</h5>
+                    <p class="text-muted">
+                        Descarga informes en PDF, Excel o formatos 
+                        personalizados.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Custom JavaScript -->
+    <script src="{{ url_for('static', filename='js/upload.js') }}"></script>
+</body>
+</html>

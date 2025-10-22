@@ -790,40 +790,91 @@ def api_filtered_temporal_trends():
 def api_upload_dataset():
     """API para cargar y analizar dataset personalizado"""
     try:
+        print(f"🔄 Iniciando carga de archivo...")
+        
+        # Verificar que hay archivos en la request
         if 'file' not in request.files:
+            print("❌ No se encontró archivo en la request")
             return jsonify({
                 'success': False,
                 'error': 'No se encontró archivo'
             }), 400
         
         file = request.files['file']
+        print(f"📁 Archivo recibido: {file.filename}")
+        
         if file.filename == '':
+            print("❌ Nombre de archivo vacío")
             return jsonify({
                 'success': False,
                 'error': 'No se seleccionó archivo'
             }), 400
         
+        # Verificar extensión del archivo
+        allowed_extensions = {'.csv', '.xlsx', '.xls'}
+        file_ext = os.path.splitext(file.filename)[1].lower()
+        if file_ext not in allowed_extensions:
+            print(f"❌ Extensión no permitida: {file_ext}")
+            return jsonify({
+                'success': False,
+                'error': f'Tipo de archivo no soportado. Use: {", ".join(allowed_extensions)}'
+            }), 400
+        
         # Generar ID único para el análisis
         analysis_id = str(uuid.uuid4())
+        print(f"🆔 ID de análisis generado: {analysis_id}")
+        
+        # Crear directorio de uploads si no existe
+        upload_dir = app.config['UPLOAD_FOLDER']
+        os.makedirs(upload_dir, exist_ok=True)
+        print(f"📂 Directorio de uploads: {upload_dir}")
         
         # Guardar archivo
         filename = secure_filename(file.filename)
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], f"{analysis_id}_{filename}")
-        file.save(file_path)
+        file_path = os.path.join(upload_dir, f"{analysis_id}_{filename}")
+        print(f"💾 Guardando archivo en: {file_path}")
         
-        print(f"📁 Archivo guardado: {file_path}")
+        try:
+            file.save(file_path)
+            print(f"✅ Archivo guardado exitosamente")
+        except Exception as save_error:
+            print(f"❌ Error guardando archivo: {save_error}")
+            return jsonify({
+                'success': False,
+                'error': f'Error guardando archivo: {str(save_error)}'
+            }), 500
+        
+        # Verificar que el archivo se guardó
+        if not os.path.exists(file_path):
+            print(f"❌ Archivo no encontrado después de guardar: {file_path}")
+            return jsonify({
+                'success': False,
+                'error': 'Error guardando archivo'
+            }), 500
         
         # Procesar archivo
+        print(f"🔄 Procesando archivo...")
         df = process_uploaded_file(file_path)
         
         if df is None:
+            print(f"❌ Error procesando archivo")
             return jsonify({
                 'success': False,
-                'error': 'Error procesando archivo. Verifique el formato.'
+                'error': 'Error procesando archivo. Verifique el formato y que el archivo no esté corrupto.'
             }), 400
         
+        print(f"✅ Archivo procesado: {len(df)} registros, {len(df.columns)} columnas")
+        
         # Realizar análisis personalizado
+        print(f"🤖 Iniciando análisis de IA...")
         analysis_result = perform_custom_analysis(df, analysis_id)
+        
+        if analysis_result is None:
+            print(f"❌ Error en análisis de IA")
+            return jsonify({
+                'success': False,
+                'error': 'Error en análisis de IA'
+            }), 500
         
         # Guardar análisis en memoria
         custom_analyses[analysis_id] = {
@@ -842,10 +893,12 @@ def api_upload_dataset():
         })
         
     except Exception as e:
-        print(f"❌ Error en upload-dataset: {e}")
+        print(f"❌ Error general en upload-dataset: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': f'Error interno del servidor: {str(e)}'
         }), 500
 
 @app.route('/api/generate-report', methods=['POST'])
@@ -912,21 +965,50 @@ def api_custom_metrics(analysis_id):
 def process_uploaded_file(file_path):
     """Procesar archivo subido"""
     try:
-        # Detectar tipo de archivo
-        if file_path.endswith('.csv'):
-            df = pd.read_csv(file_path)
-        elif file_path.endswith(('.xlsx', '.xls')):
-            df = pd.read_excel(file_path)
-        else:
+        print(f"🔄 Procesando archivo: {file_path}")
+        
+        # Verificar que el archivo existe
+        if not os.path.exists(file_path):
+            print(f"❌ Archivo no encontrado: {file_path}")
             return None
         
-        print(f"📊 Archivo procesado: {len(df)} registros, {len(df.columns)} columnas")
-        print(f"Columnas: {list(df.columns)}")
+        # Verificar tamaño del archivo
+        file_size = os.path.getsize(file_path)
+        print(f"📏 Tamaño del archivo: {file_size} bytes")
+        
+        if file_size == 0:
+            print(f"❌ Archivo vacío: {file_path}")
+            return None
+        
+        # Detectar tipo de archivo y procesar
+        if file_path.endswith('.csv'):
+            print(f"📄 Procesando archivo CSV...")
+            try:
+                df = pd.read_csv(file_path, encoding='utf-8')
+            except UnicodeDecodeError:
+                print(f"⚠️ Error de codificación UTF-8, intentando con latin-1...")
+                df = pd.read_csv(file_path, encoding='latin-1')
+        elif file_path.endswith(('.xlsx', '.xls')):
+            print(f"📊 Procesando archivo Excel...")
+            df = pd.read_excel(file_path)
+        else:
+            print(f"❌ Tipo de archivo no soportado: {file_path}")
+            return None
+        
+        # Verificar que el DataFrame no esté vacío
+        if df.empty:
+            print(f"❌ Archivo vacío después de procesar: {file_path}")
+            return None
+        
+        print(f"✅ Archivo procesado exitosamente: {len(df)} registros, {len(df.columns)} columnas")
+        print(f"📋 Columnas detectadas: {list(df.columns)}")
         
         return df
         
     except Exception as e:
-        print(f"❌ Error procesando archivo: {e}")
+        print(f"❌ Error procesando archivo {file_path}: {e}")
+        import traceback
+        traceback.print_exc()
         return None
 
 def perform_custom_analysis(df, analysis_id):
