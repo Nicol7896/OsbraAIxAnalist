@@ -962,6 +962,44 @@ def api_custom_metrics(analysis_id):
             'error': str(e)
         }), 500
 
+@app.route('/api/dashboard-problems')
+def api_dashboard_problems():
+    """API para detectar problemas en el dashboard y sugerir soluciones"""
+    try:
+        print("🔍 Analizando problemas del dashboard...")
+        
+        # Detectar problemas en los datos
+        problems = detect_dashboard_problems()
+        
+        # Generar soluciones para cada problema
+        solutions = generate_solutions_for_problems(problems)
+        
+        # Crear plan de acción
+        action_plan = create_action_plan(problems, solutions)
+        
+        result = {
+            'problems': problems,
+            'solutions': solutions,
+            'action_plan': action_plan,
+            'total_problems': len(problems),
+            'critical_problems': len([p for p in problems if p.get('severity') == 'critical']),
+            'analysis_timestamp': datetime.now().isoformat()
+        }
+        
+        print(f"✅ Análisis completado: {len(problems)} problemas detectados")
+        
+        return jsonify({
+            'success': True,
+            'data': result
+        })
+        
+    except Exception as e:
+        print(f"❌ Error en dashboard-problems: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 def process_uploaded_file(file_path):
     """Procesar archivo subido con mejor manejo de errores"""
     try:
@@ -1498,6 +1536,346 @@ def calculate_custom_metrics(df, analysis):
     except Exception as e:
         print(f"❌ Error calculando métricas personalizadas: {e}")
         return {}
+
+def detect_dashboard_problems():
+    """Detectar problemas en el dashboard"""
+    problems = []
+    
+    try:
+        # Verificar si hay datos
+        if analyzer.df is None or analyzer.df.empty:
+            problems.append({
+                'id': 'no_data',
+                'title': 'Sin datos disponibles',
+                'description': 'No hay datos cargados en el sistema',
+                'severity': 'critical',
+                'category': 'data',
+                'impact': 'El dashboard no puede mostrar información'
+            })
+            return problems
+        
+        df = analyzer.df
+        
+        # Problema 1: Datos insuficientes
+        if len(df) < 10:
+            problems.append({
+                'id': 'insufficient_data',
+                'title': 'Datos insuficientes',
+                'description': f'Solo hay {len(df)} registros, se recomienda al menos 10 para análisis confiable',
+                'severity': 'warning',
+                'category': 'data_quality',
+                'impact': 'Los análisis pueden no ser representativos'
+            })
+        
+        # Problema 2: Alta urgencia
+        if 'Nivel de urgencia' in df.columns:
+            urgent_cases = len(df[df['Nivel de urgencia'] == 'Urgente'])
+            urgent_percentage = (urgent_cases / len(df)) * 100
+            
+            if urgent_percentage > 50:
+                problems.append({
+                    'id': 'high_urgency',
+                    'title': 'Alto nivel de urgencia',
+                    'description': f'{urgent_percentage:.1f}% de los casos son urgentes ({urgent_cases} de {len(df)})',
+                    'severity': 'critical',
+                    'category': 'urgency',
+                    'impact': 'Requiere atención inmediata de las autoridades'
+                })
+        
+        # Problema 3: Zona rural sin atención
+        if 'Zona rural' in df.columns:
+            rural_cases = len(df[df['Zona rural'] == 1])
+            rural_percentage = (rural_cases / len(df)) * 100
+            
+            if rural_percentage > 30:
+                problems.append({
+                    'id': 'rural_neglect',
+                    'title': 'Alta concentración en zonas rurales',
+                    'description': f'{rural_percentage:.1f}% de los casos son de zonas rurales ({rural_cases} de {len(df)})',
+                    'severity': 'warning',
+                    'category': 'geographic',
+                    'impact': 'Posible desigualdad en la atención territorial'
+                })
+        
+        # Problema 4: Falta de acceso a internet
+        if 'Acceso a internet' in df.columns:
+            no_internet_cases = len(df[df['Acceso a internet'] == 0])
+            no_internet_percentage = (no_internet_cases / len(df)) * 100
+            
+            if no_internet_percentage > 40:
+                problems.append({
+                    'id': 'digital_divide',
+                    'title': 'Brecha digital significativa',
+                    'description': f'{no_internet_percentage:.1f}% de los casos no tienen acceso a internet ({no_internet_cases} de {len(df)})',
+                    'severity': 'warning',
+                    'category': 'digital',
+                    'impact': 'Limitaciones para servicios digitales'
+                })
+        
+        # Problema 5: Categorías desbalanceadas
+        if 'Categoría del problema' in df.columns:
+            category_counts = df['Categoría del problema'].value_counts()
+            if len(category_counts) > 0:
+                max_category = category_counts.iloc[0]
+                max_percentage = (max_category / len(df)) * 100
+                
+                if max_percentage > 60:
+                    problems.append({
+                        'id': 'category_imbalance',
+                        'title': 'Desbalance en categorías',
+                        'description': f'La categoría "{category_counts.index[0]}" representa el {max_percentage:.1f}% de todos los casos',
+                        'severity': 'info',
+                        'category': 'distribution',
+                        'impact': 'Posible sesgo en la recolección de datos'
+                    })
+        
+        # Problema 6: Datos antiguos
+        if 'Fecha del reporte' in df.columns:
+            try:
+                df['Fecha_dt'] = pd.to_datetime(df['Fecha del reporte'], errors='coerce')
+                latest_date = df['Fecha_dt'].max()
+                if pd.notna(latest_date):
+                    days_old = (datetime.now() - latest_date).days
+                    if days_old > 30:
+                        problems.append({
+                            'id': 'stale_data',
+                            'title': 'Datos desactualizados',
+                            'description': f'Los datos más recientes son de hace {days_old} días',
+                            'severity': 'warning',
+                            'category': 'timeliness',
+                            'impact': 'Los análisis pueden no reflejar la situación actual'
+                        })
+            except:
+                pass
+        
+        # Problema 7: Calidad de datos
+        missing_data = df.isnull().sum().sum()
+        total_cells = df.size
+        missing_percentage = (missing_data / total_cells) * 100
+        
+        if missing_percentage > 20:
+            problems.append({
+                'id': 'data_quality',
+                'title': 'Calidad de datos deficiente',
+                'description': f'{missing_percentage:.1f}% de las celdas contienen datos faltantes',
+                'severity': 'warning',
+                'category': 'data_quality',
+                'impact': 'Los análisis pueden ser menos precisos'
+            })
+        
+        # Problema 8: Casos duplicados
+        duplicates = df.duplicated().sum()
+        if duplicates > 0:
+            duplicate_percentage = (duplicates / len(df)) * 100
+            problems.append({
+                'id': 'duplicate_data',
+                'title': 'Datos duplicados',
+                'description': f'{duplicates} registros duplicados ({duplicate_percentage:.1f}% del total)',
+                'severity': 'info',
+                'category': 'data_quality',
+                'impact': 'Posible inflación de estadísticas'
+            })
+        
+        return problems
+        
+    except Exception as e:
+        print(f"❌ Error detectando problemas: {e}")
+        return [{
+            'id': 'analysis_error',
+            'title': 'Error en análisis',
+            'description': f'Error al analizar los datos: {str(e)}',
+            'severity': 'critical',
+            'category': 'system',
+            'impact': 'No se pueden detectar problemas automáticamente'
+        }]
+
+def generate_solutions_for_problems(problems):
+    """Generar soluciones para los problemas detectados"""
+    solutions = {}
+    
+    solution_templates = {
+        'no_data': {
+            'title': 'Cargar datos al sistema',
+            'description': 'Subir un archivo CSV o Excel con datos válidos',
+            'steps': [
+                'Ir a la sección "Análisis Personalizado"',
+                'Seleccionar un archivo CSV o Excel',
+                'Verificar que el archivo contenga al menos 10 registros',
+                'Asegurar que tenga columnas como: Categoría, Urgencia, Fecha, Ciudad'
+            ],
+            'priority': 'critical',
+            'estimated_time': '5-10 minutos'
+        },
+        'insufficient_data': {
+            'title': 'Recolectar más datos',
+            'description': 'Aumentar la cantidad de registros para análisis más confiables',
+            'steps': [
+                'Identificar fuentes adicionales de datos',
+                'Implementar sistemas de recolección automática',
+                'Establecer procesos de recolección periódica',
+                'Considerar integrar APIs de datos abiertos'
+            ],
+            'priority': 'high',
+            'estimated_time': '1-2 semanas'
+        },
+        'high_urgency': {
+            'title': 'Plan de respuesta de emergencia',
+            'description': 'Implementar protocolos para casos urgentes',
+            'steps': [
+                'Crear equipo de respuesta rápida',
+                'Establecer canales de comunicación directa',
+                'Implementar sistema de alertas automáticas',
+                'Definir tiempos de respuesta máximos',
+                'Crear protocolos de escalamiento'
+            ],
+            'priority': 'critical',
+            'estimated_time': 'Inmediato'
+        },
+        'rural_neglect': {
+            'title': 'Programa de atención rural',
+            'description': 'Desarrollar estrategias específicas para zonas rurales',
+            'steps': [
+                'Mapear zonas rurales con mayor concentración de casos',
+                'Establecer puntos de atención móviles',
+                'Capacitar personal local',
+                'Implementar tecnologías apropiadas para zonas rurales',
+                'Crear alianzas con organizaciones comunitarias'
+            ],
+            'priority': 'high',
+            'estimated_time': '2-4 semanas'
+        },
+        'digital_divide': {
+            'title': 'Estrategia de inclusión digital',
+            'description': 'Reducir la brecha digital y mejorar el acceso',
+            'steps': [
+                'Identificar zonas con menor conectividad',
+                'Implementar puntos de acceso público a internet',
+                'Desarrollar aplicaciones offline',
+                'Capacitar en uso de tecnologías digitales',
+                'Establecer centros de acceso comunitario'
+            ],
+            'priority': 'medium',
+            'estimated_time': '1-3 meses'
+        },
+        'category_imbalance': {
+            'title': 'Balancear recolección de datos',
+            'description': 'Mejorar la representatividad de todas las categorías',
+            'steps': [
+                'Analizar causas del desbalance',
+                'Implementar cuotas por categoría',
+                'Mejorar canales de reporte para categorías subrepresentadas',
+                'Capacitar en identificación de problemas por categoría',
+                'Establecer incentivos para reportes balanceados'
+            ],
+            'priority': 'medium',
+            'estimated_time': '2-6 semanas'
+        },
+        'stale_data': {
+            'title': 'Actualizar sistema de recolección',
+            'description': 'Implementar recolección de datos en tiempo real',
+            'steps': [
+                'Automatizar procesos de recolección',
+                'Implementar APIs en tiempo real',
+                'Establecer actualizaciones periódicas',
+                'Crear alertas por datos desactualizados',
+                'Integrar sistemas de monitoreo continuo'
+            ],
+            'priority': 'high',
+            'estimated_time': '1-2 semanas'
+        },
+        'data_quality': {
+            'title': 'Mejorar calidad de datos',
+            'description': 'Implementar controles de calidad y validación',
+            'steps': [
+                'Implementar validación en tiempo de entrada',
+                'Crear reglas de negocio para datos obligatorios',
+                'Establecer procesos de limpieza automática',
+                'Capacitar en mejores prácticas de entrada de datos',
+                'Implementar auditorías periódicas'
+            ],
+            'priority': 'high',
+            'estimated_time': '1-3 semanas'
+        },
+        'duplicate_data': {
+            'title': 'Eliminar duplicados',
+            'description': 'Implementar sistema de deduplicación',
+            'steps': [
+                'Identificar criterios de duplicación',
+                'Implementar algoritmo de deduplicación',
+                'Establecer procesos de revisión manual',
+                'Crear alertas para posibles duplicados futuros',
+                'Capacitar en identificación de duplicados'
+            ],
+            'priority': 'medium',
+            'estimated_time': '1-2 semanas'
+        }
+    }
+    
+    for problem in problems:
+        problem_id = problem['id']
+        if problem_id in solution_templates:
+            solutions[problem_id] = solution_templates[problem_id]
+        else:
+            solutions[problem_id] = {
+                'title': 'Solución personalizada requerida',
+                'description': 'Este problema requiere análisis específico',
+                'steps': [
+                    'Analizar el problema en detalle',
+                    'Consultar con expertos del área',
+                    'Desarrollar solución específica',
+                    'Implementar y monitorear resultados'
+                ],
+                'priority': 'medium',
+                'estimated_time': 'Variable'
+            }
+    
+    return solutions
+
+def create_action_plan(problems, solutions):
+    """Crear plan de acción priorizado"""
+    action_plan = {
+        'immediate_actions': [],
+        'short_term_actions': [],
+        'medium_term_actions': [],
+        'long_term_actions': []
+    }
+    
+    # Clasificar problemas por severidad y tiempo estimado
+    for problem in problems:
+        problem_id = problem['id']
+        solution = solutions.get(problem_id, {})
+        
+        action_item = {
+            'problem_id': problem_id,
+            'problem_title': problem['title'],
+            'solution_title': solution.get('title', 'Solución no definida'),
+            'priority': solution.get('priority', 'medium'),
+            'estimated_time': solution.get('estimated_time', 'Variable'),
+            'severity': problem.get('severity', 'info'),
+            'category': problem.get('category', 'general')
+        }
+        
+        # Clasificar por tiempo estimado
+        estimated_time = solution.get('estimated_time', '').lower()
+        if 'inmediato' in estimated_time or 'minutos' in estimated_time:
+            action_plan['immediate_actions'].append(action_item)
+        elif 'semanas' in estimated_time and any(x in estimated_time for x in ['1-2', '2-4', '2-6']):
+            action_plan['short_term_actions'].append(action_item)
+        elif 'semanas' in estimated_time and any(x in estimated_time for x in ['1-3', '2-4']):
+            action_plan['medium_term_actions'].append(action_item)
+        elif 'meses' in estimated_time:
+            action_plan['long_term_actions'].append(action_item)
+        else:
+            action_plan['medium_term_actions'].append(action_item)
+    
+    # Ordenar por prioridad dentro de cada categoría
+    for category in action_plan:
+        action_plan[category].sort(key=lambda x: (
+            {'critical': 0, 'high': 1, 'medium': 2, 'low': 3}.get(x['priority'], 2),
+            {'critical': 0, 'warning': 1, 'info': 2}.get(x['severity'], 2)
+        ))
+    
+    return action_plan
 
 if __name__ == '__main__':
     import os
