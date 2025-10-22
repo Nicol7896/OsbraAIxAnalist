@@ -120,6 +120,92 @@
             margin: 10px 0;
         }
         
+        /* Estilos para Dashboard de Presupuesto */
+        .budget-card {
+            border-left: 4px solid #28a745;
+            transition: all 0.3s ease;
+        }
+        
+        .budget-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .budget-amount {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #28a745;
+        }
+        
+        .budget-item {
+            border-bottom: 1px solid #eee;
+            padding: 0.75rem 0;
+        }
+        
+        .budget-item:last-child {
+            border-bottom: none;
+        }
+        
+        .budget-item-cost {
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        .timeline-item {
+            position: relative;
+            padding-left: 2rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0.5rem;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: #007bff;
+        }
+        
+        .timeline-item::after {
+            content: '';
+            position: absolute;
+            left: 5px;
+            top: 1.5rem;
+            width: 2px;
+            height: calc(100% + 0.5rem);
+            background-color: #e9ecef;
+        }
+        
+        .timeline-item:last-child::after {
+            display: none;
+        }
+        
+        .action-card {
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .action-card:hover {
+            border-color: #007bff;
+            box-shadow: 0 2px 8px rgba(0,123,255,0.1);
+        }
+        
+        .budget-summary {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 10px;
+            padding: 1.5rem;
+        }
+        
+        .total-budget {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #28a745;
+            text-align: center;
+        }
+        
         /* Estilos para Orion */
         body {
             background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
@@ -502,32 +588,47 @@
             </div>
         </div>
 
-        <!-- Panel de Problemas y Soluciones -->
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="card border-0 shadow-sm">
-                    <div class="card-header bg-gradient text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h5 class="mb-0">
-                                <i class="fas fa-exclamation-triangle me-2"></i>
-                                Análisis de Problemas y Soluciones
-                            </h5>
-                            <button class="btn btn-light btn-sm" onclick="analyzeProblems()">
-                                <i class="fas fa-sync-alt"></i> Analizar
-                            </button>
+            <!-- Dashboard Principal: Plan de Soluciones -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card border-0 shadow-lg">
+                        <div class="card-header bg-gradient text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h4 class="mb-1">
+                                        <i class="fas fa-clipboard-list me-2"></i>
+                                        Plan de Soluciones y Presupuesto
+                                    </h4>
+                                    <p class="mb-0 opacity-75">Análisis inteligente de problemas con plan de acción y costos</p>
+                                </div>
+                                <button class="btn btn-light btn-lg" onclick="analyzeProblems()">
+                                    <i class="fas fa-rocket me-2"></i> Generar Plan
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                    <div class="card-body">
-                        <div id="problemsContainer">
-                            <div class="text-center py-4">
-                                <i class="fas fa-search fa-2x text-muted mb-3"></i>
-                                <p class="text-muted">Haz clic en "Analizar" para detectar problemas y obtener soluciones</p>
+                        <div class="card-body p-0">
+                            <div id="problemsContainer">
+                                <div class="text-center py-5">
+                                    <div class="mb-4">
+                                        <i class="fas fa-chart-line fa-4x text-primary mb-3"></i>
+                                    </div>
+                                    <h5 class="text-muted mb-3">Dashboard de Plan de Soluciones</h5>
+                                    <p class="text-muted mb-4">
+                                        Haz clic en "Generar Plan" para analizar los datos y obtener:<br>
+                                        • Identificación automática de problemas<br>
+                                        • Soluciones específicas con presupuesto<br>
+                                        • Plan de acción priorizado por tiempo<br>
+                                        • Análisis de costos y recursos
+                                    </p>
+                                    <button class="btn btn-primary btn-lg" onclick="analyzeProblems()">
+                                        <i class="fas fa-magic me-2"></i> Iniciar Análisis
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
 
         <!-- Filtros -->
         <div class="filter-section">

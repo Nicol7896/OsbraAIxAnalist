@@ -981,17 +981,21 @@ def api_dashboard_problems():
         # Generar soluciones para cada problema
         solutions = generate_solutions_for_problems(problems)
         
-        # Crear plan de acción
-        action_plan = create_action_plan(problems, solutions)
-        
-        result = {
-            'problems': problems,
-            'solutions': solutions,
-            'action_plan': action_plan,
-            'total_problems': len(problems),
-            'critical_problems': len([p for p in problems if p.get('severity') == 'critical']),
-            'analysis_timestamp': datetime.now().isoformat()
-        }
+            # Crear plan de acción
+            action_plan = create_action_plan(problems, solutions)
+            
+            # Calcular presupuesto total
+            budget_summary = calculate_total_budget(action_plan)
+            
+            result = {
+                'problems': problems,
+                'solutions': solutions,
+                'action_plan': action_plan,
+                'budget_summary': budget_summary,
+                'total_problems': len(problems),
+                'critical_problems': len([p for p in problems if p.get('severity') == 'critical']),
+                'analysis_timestamp': datetime.now().isoformat()
+            }
         
         print(f"✅ Análisis completado: {len(problems)} problemas detectados")
         
@@ -1839,7 +1843,7 @@ def generate_solutions_for_problems(problems):
     return solutions
 
 def create_action_plan(problems, solutions):
-    """Crear plan de acción priorizado"""
+    """Crear plan de acción priorizado con presupuesto"""
     action_plan = {
         'immediate_actions': [],
         'short_term_actions': [],
@@ -1852,6 +1856,9 @@ def create_action_plan(problems, solutions):
         problem_id = problem['id']
         solution = solutions.get(problem_id, {})
         
+        # Calcular presupuesto estimado
+        budget_info = calculate_solution_budget(problem_id, problem, solution)
+        
         action_item = {
             'problem_id': problem_id,
             'problem_title': problem['title'],
@@ -1859,7 +1866,8 @@ def create_action_plan(problems, solutions):
             'priority': solution.get('priority', 'medium'),
             'estimated_time': solution.get('estimated_time', 'Variable'),
             'severity': problem.get('severity', 'info'),
-            'category': problem.get('category', 'general')
+            'category': problem.get('category', 'general'),
+            'budget': budget_info
         }
         
         # Clasificar por tiempo estimado
@@ -1883,6 +1891,165 @@ def create_action_plan(problems, solutions):
         ))
     
     return action_plan
+
+def calculate_solution_budget(problem_id, problem, solution):
+    """Calcular presupuesto estimado para una solución"""
+    budget_templates = {
+        'no_data': {
+            'base_cost': 500000,
+            'description': 'Costo de implementación de sistema de carga de datos',
+            'items': [
+                {'item': 'Desarrollo de interfaz', 'cost': 200000},
+                {'item': 'Base de datos', 'cost': 150000},
+                {'item': 'Capacitación', 'cost': 100000},
+                {'item': 'Documentación', 'cost': 50000}
+            ]
+        },
+        'insufficient_data': {
+            'base_cost': 800000,
+            'description': 'Costo de recolección y procesamiento de datos adicionales',
+            'items': [
+                {'item': 'Sistemas de recolección', 'cost': 300000},
+                {'item': 'Personal de campo', 'cost': 250000},
+                {'item': 'Tecnología móvil', 'cost': 150000},
+                {'item': 'Capacitación', 'cost': 100000}
+            ]
+        },
+        'high_urgency': {
+            'base_cost': 1200000,
+            'description': 'Costo de implementación de plan de emergencia',
+            'items': [
+                {'item': 'Equipo de respuesta rápida', 'cost': 400000},
+                {'item': 'Sistemas de alerta', 'cost': 300000},
+                {'item': 'Comunicaciones', 'cost': 200000},
+                {'item': 'Recursos de emergencia', 'cost': 300000}
+            ]
+        },
+        'rural_neglect': {
+            'base_cost': 1500000,
+            'description': 'Costo de programa de atención rural',
+            'items': [
+                {'item': 'Puntos de atención móviles', 'cost': 500000},
+                {'item': 'Personal especializado', 'cost': 400000},
+                {'item': 'Equipos médicos/educativos', 'cost': 300000},
+                {'item': 'Infraestructura', 'cost': 300000}
+            ]
+        },
+        'digital_divide': {
+            'base_cost': 2000000,
+            'description': 'Costo de estrategia de inclusión digital',
+            'items': [
+                {'item': 'Infraestructura de internet', 'cost': 800000},
+                {'item': 'Equipos tecnológicos', 'cost': 500000},
+                {'item': 'Capacitación digital', 'cost': 400000},
+                {'item': 'Centros de acceso', 'cost': 300000}
+            ]
+        },
+        'category_imbalance': {
+            'base_cost': 600000,
+            'description': 'Costo de balancear recolección de datos',
+            'items': [
+                {'item': 'Sistemas de cuotas', 'cost': 200000},
+                {'item': 'Capacitación especializada', 'cost': 200000},
+                {'item': 'Incentivos', 'cost': 100000},
+                {'item': 'Monitoreo', 'cost': 100000}
+            ]
+        },
+        'stale_data': {
+            'base_cost': 1000000,
+            'description': 'Costo de actualización del sistema de recolección',
+            'items': [
+                {'item': 'APIs en tiempo real', 'cost': 400000},
+                {'item': 'Automatización', 'cost': 300000},
+                {'item': 'Monitoreo continuo', 'cost': 200000},
+                {'item': 'Mantenimiento', 'cost': 100000}
+            ]
+        },
+        'data_quality': {
+            'base_cost': 700000,
+            'description': 'Costo de mejora de calidad de datos',
+            'items': [
+                {'item': 'Validación automática', 'cost': 300000},
+                {'item': 'Limpieza de datos', 'cost': 200000},
+                {'item': 'Capacitación', 'cost': 150000},
+                {'item': 'Auditorías', 'cost': 50000}
+            ]
+        },
+        'duplicate_data': {
+            'base_cost': 400000,
+            'description': 'Costo de sistema de deduplicación',
+            'items': [
+                {'item': 'Algoritmos de deduplicación', 'cost': 200000},
+                {'item': 'Revisión manual', 'cost': 100000},
+                {'item': 'Alertas automáticas', 'cost': 100000}
+            ]
+        }
+    }
+    
+    # Obtener plantilla de presupuesto
+    budget_template = budget_templates.get(problem_id, {
+        'base_cost': 500000,
+        'description': 'Costo estimado de implementación',
+        'items': [
+            {'item': 'Desarrollo', 'cost': 200000},
+            {'item': 'Implementación', 'cost': 150000},
+            {'item': 'Capacitación', 'cost': 100000},
+            {'item': 'Mantenimiento', 'cost': 50000}
+        ]
+    })
+    
+    # Ajustar costo según severidad
+    severity_multiplier = {
+        'critical': 1.5,
+        'warning': 1.2,
+        'info': 1.0
+    }
+    
+    multiplier = severity_multiplier.get(problem.get('severity', 'info'), 1.0)
+    adjusted_cost = int(budget_template['base_cost'] * multiplier)
+    
+    # Ajustar items
+    adjusted_items = []
+    for item in budget_template['items']:
+        adjusted_items.append({
+            'item': item['item'],
+            'cost': int(item['cost'] * multiplier)
+        })
+    
+    return {
+        'total_cost': adjusted_cost,
+        'description': budget_template['description'],
+        'items': adjusted_items,
+        'currency': 'COP',
+        'severity_multiplier': multiplier
+    }
+
+def calculate_total_budget(action_plan):
+    """Calcular presupuesto total del plan de acción"""
+    total_budget = 0
+    budget_by_timeframe = {
+        'immediate_actions': 0,
+        'short_term_actions': 0,
+        'medium_term_actions': 0,
+        'long_term_actions': 0
+    }
+    
+    for timeframe, actions in action_plan.items():
+        timeframe_total = 0
+        for action in actions:
+            if 'budget' in action:
+                cost = action['budget']['total_cost']
+                total_budget += cost
+                timeframe_total += cost
+        
+        budget_by_timeframe[timeframe] = timeframe_total
+    
+    return {
+        'total_budget': total_budget,
+        'budget_by_timeframe': budget_by_timeframe,
+        'currency': 'COP',
+        'formatted_total': f"${total_budget:,}"
+    }
 
 if __name__ == '__main__':
     import os
