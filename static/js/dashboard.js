@@ -30,21 +30,28 @@ document.addEventListener('DOMContentLoaded', function() {
  */
 async function loadDashboardData() {
     try {
+        console.log('🔄 Iniciando carga del dashboard...');
+        
+        // Mostrar indicadores de carga
+        showLoadingState();
+        
         // Cargar métricas principales
         await loadMetrics();
         
-        // Cargar gráficos
-        await loadCategoryChart();
-        await loadUrgencyChart();
-        await loadTemporalChart();
-        
-        // Cargar casos prioritarios
-        await loadPriorityCases();
+        // Cargar gráficos en paralelo para mejor rendimiento
+        await Promise.all([
+            loadCategoryChart(),
+            loadUrgencyChart(),
+            loadTemporalChart(),
+            loadPriorityCases()
+        ]);
         
         console.log('✅ Dashboard cargado exitosamente');
+        hideLoadingState();
     } catch (error) {
         console.error('❌ Error cargando dashboard:', error);
         showError('Error cargando datos del dashboard');
+        hideLoadingState();
     }
 }
 
@@ -54,21 +61,36 @@ async function loadDashboardData() {
 async function loadMetrics() {
     try {
         const response = await fetch('/api/metrics');
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const data = await response.json();
         
         if (data.success) {
             const metrics = data.data;
             
-            document.getElementById('total-casos').textContent = metrics.total_casos || 0;
-            document.getElementById('casos-urgentes').textContent = metrics.casos_urgentes || 0;
+            document.getElementById('total-casos').textContent = formatNumber(metrics.total_casos || 0);
+            document.getElementById('casos-urgentes').textContent = formatNumber(metrics.casos_urgentes || 0);
             document.getElementById('porcentaje-urgentes').textContent = `${metrics.porcentaje_urgentes || 0}%`;
-            document.getElementById('zona-rural').textContent = metrics.zona_rural || 0;
+            document.getElementById('zona-rural').textContent = formatNumber(metrics.zona_rural || 0);
             document.getElementById('porcentaje-rural').textContent = `${metrics.porcentaje_rural || 0}%`;
-            document.getElementById('sin-internet').textContent = metrics.sin_internet || 0;
+            document.getElementById('sin-internet').textContent = formatNumber(metrics.sin_internet || 0);
             document.getElementById('porcentaje-sin-internet').textContent = `${metrics.porcentaje_sin_internet || 0}%`;
+        } else {
+            throw new Error(data.error || 'Error desconocido en métricas');
         }
     } catch (error) {
         console.error('Error cargando métricas:', error);
+        // Mostrar valores por defecto en caso de error
+        document.getElementById('total-casos').textContent = '0';
+        document.getElementById('casos-urgentes').textContent = '0';
+        document.getElementById('porcentaje-urgentes').textContent = '0%';
+        document.getElementById('zona-rural').textContent = '0';
+        document.getElementById('porcentaje-rural').textContent = '0%';
+        document.getElementById('sin-internet').textContent = '0';
+        document.getElementById('porcentaje-sin-internet').textContent = '0%';
     }
 }
 
@@ -78,9 +100,14 @@ async function loadMetrics() {
 async function loadCategoryChart() {
     try {
         const response = await fetch('/api/category-distribution');
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const data = await response.json();
         
-        if (data.success) {
+        if (data.success && data.data.labels && data.data.labels.length > 0) {
             const chartData = data.data;
             
             const ctx = document.getElementById('categoryChart').getContext('2d');
@@ -115,9 +142,14 @@ async function loadCategoryChart() {
                     }
                 }
             });
+        } else {
+            throw new Error('No hay datos de categorías disponibles');
         }
     } catch (error) {
         console.error('Error cargando gráfico de categorías:', error);
+        // Mostrar mensaje de error en el contenedor del gráfico
+        const container = document.querySelector('#categoryChart').parentElement;
+        container.innerHTML = '<div class="error-message">Error cargando gráfico de categorías</div>';
     }
 }
 
@@ -178,9 +210,14 @@ async function loadUrgencyChart() {
 async function loadTemporalChart() {
     try {
         const response = await fetch('/api/temporal-trends');
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const data = await response.json();
         
-        if (data.success) {
+        if (data.success && data.data.months && data.data.months.length > 0) {
             const chartData = data.data;
             
             const plotData = [{
@@ -210,13 +247,26 @@ async function loadTemporalChart() {
                 yaxis: {
                     title: 'Número de Reportes'
                 },
-                margin: { t: 50, r: 50, b: 50, l: 50 }
+                margin: { t: 50, r: 50, b: 50, l: 50 },
+                height: 400,
+                autosize: true
             };
             
-            Plotly.newPlot('temporalChart', plotData, layout, {responsive: true});
+            const config = {
+                responsive: true,
+                displayModeBar: true,
+                displaylogo: false
+            };
+            
+            Plotly.newPlot('temporalChart', plotData, layout, config);
+        } else {
+            throw new Error('No hay datos temporales disponibles');
         }
     } catch (error) {
         console.error('Error cargando gráfico temporal:', error);
+        // Mostrar mensaje de error en el contenedor del gráfico
+        const container = document.getElementById('temporalChart');
+        container.innerHTML = '<div class="error-message">Error cargando gráfico temporal</div>';
     }
 }
 
@@ -350,11 +400,47 @@ function clearFilters() {
 }
 
 /**
+ * Mostrar estado de carga
+ */
+function showLoadingState() {
+    // Los indicadores de carga ya están en el HTML
+    console.log('🔄 Mostrando estado de carga...');
+}
+
+/**
+ * Ocultar estado de carga
+ */
+function hideLoadingState() {
+    // Ocultar spinners y mostrar contenido
+    const loaders = document.querySelectorAll('.spinner-border');
+    loaders.forEach(loader => {
+        loader.style.display = 'none';
+    });
+    console.log('✅ Estado de carga oculto');
+}
+
+/**
  * Mostrar error
  */
 function showError(message) {
     console.error('Error:', message);
-    // Aquí puedes implementar una notificación visual
+    
+    // Crear elemento de error si no existe
+    let errorDiv = document.getElementById('error-message');
+    if (!errorDiv) {
+        errorDiv = document.createElement('div');
+        errorDiv.id = 'error-message';
+        errorDiv.className = 'error-message';
+        document.body.insertBefore(errorDiv, document.body.firstChild);
+    }
+    
+    errorDiv.textContent = message;
+    errorDiv.style.display = 'block';
+    
+    // Ocultar después de 5 segundos
+    setTimeout(() => {
+        errorDiv.style.display = 'none';
+    }, 5000);
 }
 
 /**

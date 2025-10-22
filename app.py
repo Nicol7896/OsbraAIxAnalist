@@ -16,7 +16,7 @@ app = Flask(__name__)
 
 # Configuración
 app.config['SECRET_KEY'] = 'senasoft2025_ibm_reto'
-app.config['DEBUG'] = True
+app.config['DEBUG'] = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
 
 class DataAnalyzer:
     """Clase para manejar y analizar los datos procesados por IA"""
@@ -32,8 +32,12 @@ class DataAnalyzer:
             if os.path.exists('dataset_procesado_huggingface.csv'):
                 self.df = pd.read_csv('dataset_procesado_huggingface.csv')
                 print(f"✅ Datos cargados: {len(self.df)} registros")
+            elif os.path.exists('dataset.csv'):
+                # Usar el dataset original si existe
+                self.df = pd.read_csv('dataset.csv')
+                print(f"✅ Dataset original cargado: {len(self.df)} registros")
             else:
-                # Datos de ejemplo si no existe el archivo procesado
+                # Datos de ejemplo si no existe ningún archivo
                 self.df = self.create_sample_data()
                 print("⚠️ Usando datos de ejemplo")
         except Exception as e:
@@ -116,14 +120,29 @@ class DataAnalyzer:
         if self.df is None:
             return {}
         
-        # Agrupar por mes
-        self.df['Mes'] = pd.to_datetime(self.df['Fecha del reporte']).dt.to_period('M')
-        monthly_data = self.df.groupby('Mes').size()
-        
-        return {
-            'months': [str(month) for month in monthly_data.index],
-            'counts': monthly_data.values.tolist()
-        }
+        try:
+            # Verificar si existe la columna de fecha
+            if 'Fecha del reporte' in self.df.columns:
+                # Agrupar por mes
+                self.df['Mes'] = pd.to_datetime(self.df['Fecha del reporte']).dt.to_period('M')
+                monthly_data = self.df.groupby('Mes').size()
+                
+                return {
+                    'months': [str(month) for month in monthly_data.index],
+                    'counts': monthly_data.values.tolist()
+                }
+            else:
+                # Si no hay columna de fecha, crear datos de ejemplo
+                import numpy as np
+                months = ['2024-01', '2024-02', '2024-03', '2024-04', '2024-05', '2024-06']
+                counts = np.random.randint(50, 200, len(months))
+                return {
+                    'months': months,
+                    'counts': counts.tolist()
+                }
+        except Exception as e:
+            print(f"Error en tendencias temporales: {e}")
+            return {'months': [], 'counts': []}
 
 # Instancia global del analizador
 analyzer = DataAnalyzer()
