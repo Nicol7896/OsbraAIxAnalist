@@ -471,6 +471,9 @@ async function loadFilteredData(categoria, urgencia, fechaInicio, fechaFin) {
             // Cargar casos prioritarios filtrados
             await loadFilteredPriorityCases(categoria, urgencia, fechaInicio, fechaFin);
             
+            // Actualizar gráficos con filtros
+            await loadFilteredCharts(categoria, urgencia, fechaInicio, fechaFin);
+            
         } else {
             throw new Error(data.error || 'Error desconocido en métricas filtradas');
         }
@@ -526,6 +529,273 @@ async function loadFilteredPriorityCases(categoria, urgencia, fechaInicio, fecha
         
         const tbody = document.getElementById('priority-table');
         tbody.innerHTML = '<tr><td colspan="7" class="text-center error-message">Error cargando datos filtrados</td></tr>';
+    }
+}
+
+/**
+ * Cargar gráficos filtrados
+ */
+async function loadFilteredCharts(categoria, urgencia, fechaInicio, fechaFin) {
+    try {
+        console.log('🔄 Cargando gráficos filtrados...');
+        
+        // Mostrar indicadores de carga en los gráficos
+        showChartLoadingIndicators();
+        
+        // Construir parámetros de filtro
+        const params = new URLSearchParams();
+        if (categoria) params.append('categoria', categoria);
+        if (urgencia) params.append('urgencia', urgencia);
+        if (fechaInicio) params.append('fecha_inicio', fechaInicio);
+        if (fechaFin) params.append('fecha_fin', fechaFin);
+        
+        // Cargar gráficos en paralelo
+        await Promise.all([
+            loadFilteredCategoryChart(params),
+            loadFilteredUrgencyChart(params),
+            loadFilteredTemporalChart(params)
+        ]);
+        
+        // Ocultar indicadores de carga
+        hideChartLoadingIndicators();
+        
+        console.log('✅ Gráficos filtrados cargados exitosamente');
+        
+    } catch (error) {
+        console.error('❌ Error cargando gráficos filtrados:', error);
+        hideChartLoadingIndicators();
+    }
+}
+
+/**
+ * Mostrar indicadores de carga en gráficos
+ */
+function showChartLoadingIndicators() {
+    // Agregar spinners a los contenedores de gráficos
+    const categoryContainer = document.querySelector('#categoryChart').parentElement;
+    const urgencyContainer = document.querySelector('#urgencyChart').parentElement;
+    const temporalContainer = document.getElementById('temporalChart');
+    
+    // Crear indicadores de carga si no existen
+    if (!document.getElementById('category-loading')) {
+        const categoryLoading = document.createElement('div');
+        categoryLoading.id = 'category-loading';
+        categoryLoading.className = 'chart-loading';
+        categoryLoading.innerHTML = '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Cargando...</span></div>';
+        categoryContainer.appendChild(categoryLoading);
+    }
+    
+    if (!document.getElementById('urgency-loading')) {
+        const urgencyLoading = document.createElement('div');
+        urgencyLoading.id = 'urgency-loading';
+        urgencyLoading.className = 'chart-loading';
+        urgencyLoading.innerHTML = '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Cargando...</span></div>';
+        urgencyContainer.appendChild(urgencyLoading);
+    }
+    
+    if (!document.getElementById('temporal-loading')) {
+        const temporalLoading = document.createElement('div');
+        temporalLoading.id = 'temporal-loading';
+        temporalLoading.className = 'chart-loading';
+        temporalLoading.innerHTML = '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Cargando...</span></div>';
+        temporalContainer.appendChild(temporalLoading);
+    }
+}
+
+/**
+ * Ocultar indicadores de carga en gráficos
+ */
+function hideChartLoadingIndicators() {
+    const loadings = ['category-loading', 'urgency-loading', 'temporal-loading'];
+    loadings.forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.remove();
+        }
+    });
+}
+
+/**
+ * Cargar gráfico de categorías filtrado
+ */
+async function loadFilteredCategoryChart(params) {
+    try {
+        const url = `/api/filtered-category-distribution?${params.toString()}`;
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.success && data.data.labels && data.data.labels.length > 0) {
+            const chartData = data.data;
+            
+            const ctx = document.getElementById('categoryChart').getContext('2d');
+            
+            if (categoryChart) {
+                categoryChart.destroy();
+            }
+            
+            categoryChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: chartData.labels,
+                    datasets: [{
+                        data: chartData.values,
+                        backgroundColor: [
+                            colors.primary,
+                            colors.success,
+                            colors.warning,
+                            colors.danger
+                        ],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+            
+            console.log('✅ Gráfico de categorías filtrado actualizado');
+        } else {
+            throw new Error('No hay datos de categorías filtradas disponibles');
+        }
+    } catch (error) {
+        console.error('Error cargando gráfico de categorías filtrado:', error);
+    }
+}
+
+/**
+ * Cargar gráfico de urgencia filtrado
+ */
+async function loadFilteredUrgencyChart(params) {
+    try {
+        const url = `/api/filtered-urgency-distribution?${params.toString()}`;
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            const chartData = data.data;
+            
+            const ctx = document.getElementById('urgencyChart').getContext('2d');
+            
+            if (urgencyChart) {
+                urgencyChart.destroy();
+            }
+            
+            urgencyChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: chartData.labels,
+                    datasets: [{
+                        label: 'Número de Casos',
+                        data: chartData.values,
+                        backgroundColor: [
+                            colors.danger,
+                            colors.success
+                        ],
+                        borderColor: [
+                            colors.danger,
+                            colors.success
+                        ],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+            
+            console.log('✅ Gráfico de urgencia filtrado actualizado');
+        }
+    } catch (error) {
+        console.error('Error cargando gráfico de urgencia filtrado:', error);
+    }
+}
+
+/**
+ * Cargar gráfico temporal filtrado
+ */
+async function loadFilteredTemporalChart(params) {
+    try {
+        const url = `/api/filtered-temporal-trends?${params.toString()}`;
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.success && data.data.months && data.data.months.length > 0) {
+            const chartData = data.data;
+            
+            const plotData = [{
+                x: chartData.months,
+                y: chartData.counts,
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: 'Reportes por Mes',
+                line: {
+                    color: colors.primary,
+                    width: 3
+                },
+                marker: {
+                    color: colors.primary,
+                    size: 8
+                }
+            }];
+            
+            const layout = {
+                title: {
+                    text: 'Tendencias Mensuales (Filtradas)',
+                    font: { size: 16 }
+                },
+                xaxis: {
+                    title: 'Mes'
+                },
+                yaxis: {
+                    title: 'Número de Reportes'
+                },
+                margin: { t: 50, r: 50, b: 50, l: 50 },
+                height: 400,
+                autosize: true
+            };
+            
+            const config = {
+                responsive: true,
+                displayModeBar: true,
+                displaylogo: false
+            };
+            
+            Plotly.newPlot('temporalChart', plotData, layout, config);
+            
+            console.log('✅ Gráfico temporal filtrado actualizado');
+        } else {
+            throw new Error('No hay datos temporales filtrados disponibles');
+        }
+    } catch (error) {
+        console.error('Error cargando gráfico temporal filtrado:', error);
     }
 }
 

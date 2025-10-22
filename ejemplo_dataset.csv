@@ -1,0 +1,11 @@
+ID,Nombre,Edad,Genero,Ciudad,Comentario,Categoria,Urgencia,Fecha,Internet,Zona_Rural
+1,Juan,25,M,Bogotá,Necesitamos más parques en el barrio,Medio Ambiente,No urgente,2024-01-15,1,0
+2,María,30,F,Medellín,El hospital no tiene medicamentos,Salud,Urgente,2024-01-16,0,1
+3,Carlos,45,M,Cali,Las calles están muy oscuras,Seguridad,Urgente,2024-01-17,1,0
+4,Ana,28,F,Barranquilla,No hay escuelas cerca,Educación,No urgente,2024-01-18,0,1
+5,Luis,35,M,Cartagena,La basura no se recoge,Medio Ambiente,No urgente,2024-01-19,1,0
+6,Carmen,50,F,Bogotá,El transporte público es muy caro,Educación,No urgente,2024-01-20,1,0
+7,Pedro,22,M,Medellín,Los semáforos no funcionan,Seguridad,Urgente,2024-01-21,0,1
+8,Sofia,29,F,Cali,No hay agua potable,Salud,Urgente,2024-01-22,0,1
+9,Roberto,40,M,Barranquilla,Las aceras están rotas,Seguridad,No urgente,2024-01-23,1,0
+10,Laura,33,F,Cartagena,Necesitamos biblioteca pública,Educación,No urgente,2024-01-24,1,0
