@@ -404,9 +404,70 @@ async function applyFilters() {
     
     console.log('Aplicando filtros:', { categoria, urgencia, fechaInicio, fechaFin });
     
+    // Validar fechas
+    if (!validateDates(fechaInicio, fechaFin)) {
+        return;
+    }
+    
     // Aquí puedes implementar la lógica de filtrado
     // Por ahora, recargamos todos los datos
     await loadDashboardData();
+}
+
+/**
+ * Validar fechas
+ */
+function validateDates(fechaInicio, fechaFin) {
+    // Si no hay fechas, está bien
+    if (!fechaInicio && !fechaFin) {
+        return true;
+    }
+    
+    // Validar formato de fecha
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    
+    if (fechaInicio && !dateRegex.test(fechaInicio)) {
+        showError('Formato de fecha de inicio inválido. Use YYYY-MM-DD');
+        return false;
+    }
+    
+    if (fechaFin && !dateRegex.test(fechaFin)) {
+        showError('Formato de fecha de fin inválido. Use YYYY-MM-DD');
+        return false;
+    }
+    
+    // Validar rango de años (2020-2025)
+    const minYear = 2020;
+    const maxYear = 2025;
+    
+    if (fechaInicio) {
+        const yearInicio = new Date(fechaInicio).getFullYear();
+        if (yearInicio < minYear || yearInicio > maxYear) {
+            showError(`La fecha de inicio debe estar entre ${minYear} y ${maxYear}`);
+            return false;
+        }
+    }
+    
+    if (fechaFin) {
+        const yearFin = new Date(fechaFin).getFullYear();
+        if (yearFin < minYear || yearFin > maxYear) {
+            showError(`La fecha de fin debe estar entre ${minYear} y ${maxYear}`);
+            return false;
+        }
+    }
+    
+    // Validar que fecha de inicio sea anterior a fecha de fin
+    if (fechaInicio && fechaFin) {
+        const inicio = new Date(fechaInicio);
+        const fin = new Date(fechaFin);
+        
+        if (inicio > fin) {
+            showError('La fecha de inicio debe ser anterior a la fecha de fin');
+            return false;
+        }
+    }
+    
+    return true;
 }
 
 /**

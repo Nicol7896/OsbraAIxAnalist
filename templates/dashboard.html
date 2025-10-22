@@ -12,7 +12,7 @@
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Plotly.js -->
-    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
     
     <style>
         .metric-card {
@@ -147,11 +147,15 @@
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">Fecha Inicio</label>
-                    <input type="date" class="form-control" id="filter-fecha-inicio">
+                    <input type="date" class="form-control" id="filter-fecha-inicio" 
+                           min="2020-01-01" max="2025-12-31" 
+                           title="Selecciona una fecha entre 2020 y 2025">
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">Fecha Fin</label>
-                    <input type="date" class="form-control" id="filter-fecha-fin">
+                    <input type="date" class="form-control" id="filter-fecha-fin" 
+                           min="2020-01-01" max="2025-12-31" 
+                           title="Selecciona una fecha entre 2020 y 2025">
                 </div>
             </div>
             <div class="row mt-3">
