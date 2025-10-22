@@ -1,0 +1,22 @@
+# Sistema de Análisis Inteligente - Reto IBM SenaSoft 2025
+# Dependencias optimizadas para Railway
+
+# Framework Web
+Flask==2.3.3
+Werkzeug==2.3.7
+gunicorn==21.2.0
+
+# Análisis de datos
+pandas==2.1.1
+numpy==1.24.3
+
+# Machine Learning e IA
+torch==2.0.1
+transformers==4.33.2
+
+# Visualización
+plotly==5.16.1
+
+# Utilidades
+python-dateutil==2.8.2
+requests==2.31.0

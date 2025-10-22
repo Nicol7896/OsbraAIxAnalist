@@ -1,0 +1,380 @@
+/**
+ * 🚀 Dashboard JavaScript - Sistema de Análisis Inteligente
+ * Reto IBM SenaSoft 2025
+ */
+
+// Variables globales
+let categoryChart = null;
+let urgencyChart = null;
+let temporalChart = null;
+
+// Colores para gráficos
+const colors = {
+    primary: '#667eea',
+    success: '#11998e',
+    warning: '#f093fb',
+    danger: '#f5576c',
+    info: '#4facfe',
+    light: '#f8f9fa',
+    dark: '#343a40'
+};
+
+// Inicializar dashboard
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 Iniciando Dashboard del Sistema de Análisis Inteligente');
+    loadDashboardData();
+});
+
+/**
+ * Cargar todos los datos del dashboard
+ */
+async function loadDashboardData() {
+    try {
+        // Cargar métricas principales
+        await loadMetrics();
+        
+        // Cargar gráficos
+        await loadCategoryChart();
+        await loadUrgencyChart();
+        await loadTemporalChart();
+        
+        // Cargar casos prioritarios
+        await loadPriorityCases();
+        
+        console.log('✅ Dashboard cargado exitosamente');
+    } catch (error) {
+        console.error('❌ Error cargando dashboard:', error);
+        showError('Error cargando datos del dashboard');
+    }
+}
+
+/**
+ * Cargar métricas principales
+ */
+async function loadMetrics() {
+    try {
+        const response = await fetch('/api/metrics');
+        const data = await response.json();
+        
+        if (data.success) {
+            const metrics = data.data;
+            
+            document.getElementById('total-casos').textContent = metrics.total_casos || 0;
+            document.getElementById('casos-urgentes').textContent = metrics.casos_urgentes || 0;
+            document.getElementById('porcentaje-urgentes').textContent = `${metrics.porcentaje_urgentes || 0}%`;
+            document.getElementById('zona-rural').textContent = metrics.zona_rural || 0;
+            document.getElementById('porcentaje-rural').textContent = `${metrics.porcentaje_rural || 0}%`;
+            document.getElementById('sin-internet').textContent = metrics.sin_internet || 0;
+            document.getElementById('porcentaje-sin-internet').textContent = `${metrics.porcentaje_sin_internet || 0}%`;
+        }
+    } catch (error) {
+        console.error('Error cargando métricas:', error);
+    }
+}
+
+/**
+ * Cargar gráfico de distribución por categoría
+ */
+async function loadCategoryChart() {
+    try {
+        const response = await fetch('/api/category-distribution');
+        const data = await response.json();
+        
+        if (data.success) {
+            const chartData = data.data;
+            
+            const ctx = document.getElementById('categoryChart').getContext('2d');
+            
+            if (categoryChart) {
+                categoryChart.destroy();
+            }
+            
+            categoryChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: chartData.labels,
+                    datasets: [{
+                        data: chartData.values,
+                        backgroundColor: [
+                            colors.primary,
+                            colors.success,
+                            colors.warning,
+                            colors.danger
+                        ],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+    } catch (error) {
+        console.error('Error cargando gráfico de categorías:', error);
+    }
+}
+
+/**
+ * Cargar gráfico de distribución por urgencia
+ */
+async function loadUrgencyChart() {
+    try {
+        const response = await fetch('/api/urgency-distribution');
+        const data = await response.json();
+        
+        if (data.success) {
+            const chartData = data.data;
+            
+            const ctx = document.getElementById('urgencyChart').getContext('2d');
+            
+            if (urgencyChart) {
+                urgencyChart.destroy();
+            }
+            
+            urgencyChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: chartData.labels,
+                    datasets: [{
+                        label: 'Número de Casos',
+                        data: chartData.values,
+                        backgroundColor: [
+                            colors.danger,
+                            colors.success
+                        ],
+                        borderColor: [
+                            colors.danger,
+                            colors.success
+                        ],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+    } catch (error) {
+        console.error('Error cargando gráfico de urgencia:', error);
+    }
+}
+
+/**
+ * Cargar gráfico de tendencias temporales
+ */
+async function loadTemporalChart() {
+    try {
+        const response = await fetch('/api/temporal-trends');
+        const data = await response.json();
+        
+        if (data.success) {
+            const chartData = data.data;
+            
+            const plotData = [{
+                x: chartData.months,
+                y: chartData.counts,
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: 'Reportes por Mes',
+                line: {
+                    color: colors.primary,
+                    width: 3
+                },
+                marker: {
+                    color: colors.primary,
+                    size: 8
+                }
+            }];
+            
+            const layout = {
+                title: {
+                    text: 'Tendencias Mensuales',
+                    font: { size: 16 }
+                },
+                xaxis: {
+                    title: 'Mes'
+                },
+                yaxis: {
+                    title: 'Número de Reportes'
+                },
+                margin: { t: 50, r: 50, b: 50, l: 50 }
+            };
+            
+            Plotly.newPlot('temporalChart', plotData, layout, {responsive: true});
+        }
+    } catch (error) {
+        console.error('Error cargando gráfico temporal:', error);
+    }
+}
+
+/**
+ * Cargar casos prioritarios
+ */
+async function loadPriorityCases() {
+    try {
+        const response = await fetch('/api/priority-cases?limit=20');
+        const data = await response.json();
+        
+        if (data.success) {
+            const cases = data.data;
+            
+            // Actualizar lista de casos prioritarios
+            updatePriorityCasesList(cases);
+            
+            // Actualizar tabla
+            updatePriorityTable(cases);
+        }
+    } catch (error) {
+        console.error('Error cargando casos prioritarios:', error);
+    }
+}
+
+/**
+ * Actualizar lista de casos prioritarios
+ */
+function updatePriorityCasesList(cases) {
+    const container = document.getElementById('priority-cases');
+    
+    if (cases.length === 0) {
+        container.innerHTML = '<p class="text-muted">No hay casos prioritarios</p>';
+        return;
+    }
+    
+    let html = '';
+    cases.slice(0, 10).forEach((case_, index) => {
+        const priorityClass = getPriorityClass(case_.Prioridad);
+        const urgencyIcon = case_['Nivel de urgencia'] === 'Urgente' ? 'fas fa-exclamation-triangle text-danger' : 'fas fa-check-circle text-success';
+        
+        html += `
+            <div class="d-flex justify-content-between align-items-center mb-2 p-2 border rounded">
+                <div>
+                    <strong>#${case_.ID}</strong> - ${case_['Ciudad']}
+                    <br>
+                    <small class="text-muted">${case_['Categoría del problema']}</small>
+                </div>
+                <div class="text-end">
+                    <span class="priority-badge ${priorityClass}">${case_.Prioridad}/100</span>
+                    <br>
+                    <i class="${urgencyIcon}"></i>
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
+
+/**
+ * Actualizar tabla de casos prioritarios
+ */
+function updatePriorityTable(cases) {
+    const tbody = document.getElementById('priority-table');
+    
+    if (cases.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No hay casos prioritarios</td></tr>';
+        return;
+    }
+    
+    let html = '';
+    cases.forEach((case_, index) => {
+        const priorityClass = getPriorityClass(case_.Prioridad);
+        const urgencyIcon = case_['Nivel de urgencia'] === 'Urgente' ? 'fas fa-exclamation-triangle text-danger' : 'fas fa-check-circle text-success';
+        const ruralIcon = case_['Zona rural'] == 1 ? 'fas fa-map-marker-alt text-warning' : 'fas fa-city text-info';
+        const internetIcon = case_['Acceso a internet'] == 1 ? 'fas fa-wifi text-success' : 'fas fa-wifi-slash text-danger';
+        
+        html += `
+            <tr>
+                <td>${case_.ID}</td>
+                <td>${case_['Ciudad']}</td>
+                <td>${case_['Categoría del problema']}</td>
+                <td><i class="${urgencyIcon}"></i> ${case_['Nivel de urgencia']}</td>
+                <td><span class="priority-badge ${priorityClass}">${case_.Prioridad}/100</span></td>
+                <td><i class="${ruralIcon}"></i> ${case_['Zona rural'] == 1 ? 'Rural' : 'Urbana'}</td>
+                <td><i class="${internetIcon}"></i> ${case_['Acceso a internet'] == 1 ? 'Sí' : 'No'}</td>
+            </tr>
+        `;
+    });
+    
+    tbody.innerHTML = html;
+}
+
+/**
+ * Obtener clase CSS para prioridad
+ */
+function getPriorityClass(priority) {
+    if (priority >= 80) return 'priority-high';
+    if (priority >= 60) return 'priority-medium';
+    return 'priority-low';
+}
+
+/**
+ * Aplicar filtros
+ */
+async function applyFilters() {
+    const categoria = document.getElementById('filter-categoria').value;
+    const urgencia = document.getElementById('filter-urgencia').value;
+    const fechaInicio = document.getElementById('filter-fecha-inicio').value;
+    const fechaFin = document.getElementById('filter-fecha-fin').value;
+    
+    console.log('Aplicando filtros:', { categoria, urgencia, fechaInicio, fechaFin });
+    
+    // Aquí puedes implementar la lógica de filtrado
+    // Por ahora, recargamos todos los datos
+    await loadDashboardData();
+}
+
+/**
+ * Limpiar filtros
+ */
+function clearFilters() {
+    document.getElementById('filter-categoria').value = '';
+    document.getElementById('filter-urgencia').value = '';
+    document.getElementById('filter-fecha-inicio').value = '';
+    document.getElementById('filter-fecha-fin').value = '';
+    
+    // Recargar datos sin filtros
+    loadDashboardData();
+}
+
+/**
+ * Mostrar error
+ */
+function showError(message) {
+    console.error('Error:', message);
+    // Aquí puedes implementar una notificación visual
+}
+
+/**
+ * Formatear número con separadores de miles
+ */
+function formatNumber(num) {
+    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
+/**
+ * Actualizar gráficos cuando cambien los datos
+ */
+function refreshCharts() {
+    loadCategoryChart();
+    loadUrgencyChart();
+    loadTemporalChart();
+    loadPriorityCases();
+}
+
+// Exportar funciones para uso global
+window.applyFilters = applyFilters;
+window.clearFilters = clearFilters;
+window.refreshCharts = refreshCharts;
