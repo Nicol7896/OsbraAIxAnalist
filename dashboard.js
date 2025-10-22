@@ -214,19 +214,27 @@ async function loadUrgencyChart() {
  */
 async function loadTemporalChart() {
     try {
+        console.log('🔄 Cargando gráfico temporal...');
         const response = await fetch('/api/temporal-trends');
+        
+        console.log('📡 Respuesta de temporal-trends:', response.status, response.statusText);
         
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         
         const data = await response.json();
+        console.log('📊 Datos de temporal-trends recibidos:', data);
         
         if (data.success && data.data.months && data.data.months.length > 0) {
             const chartData = data.data;
             
         // Crear gráfico de barras más amigable para móviles
-        const ctx = document.getElementById('temporalChart').getContext('2d');
+        const canvas = document.getElementById('temporalChart');
+        if (!canvas) {
+            throw new Error('Elemento temporalChart no encontrado');
+        }
+        const ctx = canvas.getContext('2d');
         
         // Destruir gráfico anterior si existe
         if (window.temporalChart) {
@@ -314,14 +322,27 @@ async function loadTemporalChart() {
                 }
             }
         });
+        
+        console.log('✅ Gráfico temporal creado exitosamente');
         } else {
+            console.log('⚠️ No hay datos temporales disponibles:', data);
             throw new Error('No hay datos temporales disponibles');
         }
     } catch (error) {
-        console.error('Error cargando gráfico temporal:', error);
+        console.error('❌ Error cargando gráfico temporal:', error);
         // Mostrar mensaje de error en el contenedor del gráfico
         const container = document.getElementById('temporalChart');
-        container.innerHTML = '<div class="error-message">Error cargando gráfico temporal</div>';
+        if (container) {
+            container.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Error cargando gráfico temporal:</strong><br>
+                    ${error.message}
+                </div>
+            `;
+        } else {
+            console.error('❌ No se pudo encontrar el contenedor temporalChart');
+        }
     }
 }
 
@@ -1120,7 +1141,236 @@ function refreshCharts() {
     loadPriorityCases();
 }
 
+/**
+ * Analizar problemas del dashboard
+ */
+async function analyzeProblems() {
+    try {
+        console.log('🔍 Iniciando análisis de problemas...');
+        
+        // Mostrar indicador de carga
+        const container = document.getElementById('problemsContainer');
+        container.innerHTML = `
+            <div class="text-center py-4">
+                <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">Analizando...</span>
+                </div>
+                <p class="text-muted">Analizando datos para detectar problemas...</p>
+            </div>
+        `;
+        
+        // Llamar a la API
+        const response = await fetch('/api/dashboard-problems');
+        
+        if (!response.ok) {
+            throw new Error(`Error del servidor: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            console.log('✅ Análisis completado:', result.data);
+            displayProblemsAndSolutions(result.data);
+        } else {
+            throw new Error(result.error || 'Error en el análisis');
+        }
+        
+    } catch (error) {
+        console.error('❌ Error analizando problemas:', error);
+        showProblemsError('Error analizando problemas: ' + error.message);
+    }
+}
+
+/**
+ * Mostrar problemas y soluciones
+ */
+function displayProblemsAndSolutions(data) {
+    const container = document.getElementById('problemsContainer');
+    
+    if (data.total_problems === 0) {
+        container.innerHTML = `
+            <div class="text-center py-4">
+                <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                <h5 class="text-success">¡Excelente!</h5>
+                <p class="text-muted">No se detectaron problemas críticos en los datos.</p>
+                <small class="text-muted">Última actualización: ${new Date(data.analysis_timestamp).toLocaleString()}</small>
+            </div>
+        `;
+        return;
+    }
+    
+    let html = `
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <div class="alert alert-info mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>${data.total_problems}</strong> problemas detectados
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="alert alert-danger mb-0">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>${data.critical_problems}</strong> problemas críticos
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Mostrar problemas
+    html += '<div class="row mb-4">';
+    html += '<div class="col-12"><h6><i class="fas fa-exclamation-triangle me-2"></i>Problemas Detectados</h6></div>';
+    
+    data.problems.forEach(problem => {
+        html += `
+            <div class="col-md-6 mb-3">
+                <div class="card problem-card ${problem.severity}">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h6 class="card-title mb-0">${problem.title}</h6>
+                            <span class="severity-badge severity-${problem.severity}">${problem.severity.toUpperCase()}</span>
+                        </div>
+                        <p class="card-text text-muted small">${problem.description}</p>
+                        <small class="text-muted">
+                            <i class="fas fa-tag me-1"></i>${problem.category} | 
+                            <i class="fas fa-bullseye me-1"></i>${problem.impact}
+                        </small>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    
+    // Mostrar soluciones
+    html += '<div class="row mb-4">';
+    html += '<div class="col-12"><h6><i class="fas fa-lightbulb me-2"></i>Soluciones Propuestas</h6></div>';
+    
+    data.problems.forEach(problem => {
+        const solution = data.solutions[problem.id];
+        if (solution) {
+            html += `
+                <div class="col-md-6 mb-3">
+                    <div class="card solution-card">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h6 class="card-title mb-0">${solution.title}</h6>
+                                <span class="priority-badge priority-${solution.priority}">${solution.priority.toUpperCase()}</span>
+                            </div>
+                            <p class="card-text text-muted small">${solution.description}</p>
+                            <div class="mt-2">
+                                <small class="text-muted">
+                                    <i class="fas fa-clock me-1"></i>Tiempo estimado: ${solution.estimated_time}
+                                </small>
+                            </div>
+                            <div class="mt-2">
+                                <button class="btn btn-outline-primary btn-sm" onclick="showSolutionDetails('${problem.id}')">
+                                    <i class="fas fa-list me-1"></i>Ver pasos
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+    });
+    
+    html += '</div>';
+    
+    // Mostrar plan de acción
+    html += '<div class="row">';
+    html += '<div class="col-12"><h6><i class="fas fa-tasks me-2"></i>Plan de Acción</h6></div>';
+    
+    const actionPlan = data.action_plan;
+    const timeframes = [
+        { key: 'immediate_actions', title: 'Acciones Inmediatas', class: 'immediate', icon: 'fas fa-bolt' },
+        { key: 'short_term_actions', title: 'Corto Plazo (1-4 semanas)', class: 'short-term', icon: 'fas fa-clock' },
+        { key: 'medium_term_actions', title: 'Mediano Plazo (1-3 meses)', class: 'medium-term', icon: 'fas fa-calendar' },
+        { key: 'long_term_actions', title: 'Largo Plazo (3+ meses)', class: 'long-term', icon: 'fas fa-calendar-alt' }
+    ];
+    
+    timeframes.forEach(timeframe => {
+        const actions = actionPlan[timeframe.key];
+        if (actions && actions.length > 0) {
+            html += `
+                <div class="col-md-6 mb-3">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="${timeframe.icon} me-2"></i>${timeframe.title}
+                            </h6>
+                        </div>
+                        <div class="card-body">
+            `;
+            
+            actions.forEach(action => {
+                html += `
+                    <div class="action-plan-item ${timeframe.class}">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <strong>${action.solution_title}</strong>
+                                <p class="mb-1 text-muted small">${action.problem_title}</p>
+                                <small class="text-muted">
+                                    <i class="fas fa-clock me-1"></i>${action.estimated_time}
+                                </small>
+                            </div>
+                            <span class="priority-badge priority-${action.priority}">${action.priority.toUpperCase()}</span>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += `
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+    });
+    
+    html += '</div>';
+    
+    // Agregar timestamp
+    html += `
+        <div class="row mt-3">
+            <div class="col-12">
+                <small class="text-muted">
+                    <i class="fas fa-clock me-1"></i>
+                    Última actualización: ${new Date(data.analysis_timestamp).toLocaleString()}
+                </small>
+            </div>
+        </div>
+    `;
+    
+    container.innerHTML = html;
+}
+
+/**
+ * Mostrar detalles de una solución
+ */
+function showSolutionDetails(problemId) {
+    // Esta función se puede expandir para mostrar un modal con los pasos detallados
+    console.log('Mostrando detalles para problema:', problemId);
+    // Por ahora, solo mostramos un alert
+    alert('Función de detalles en desarrollo. Próximamente se mostrará un modal con los pasos detallados.');
+}
+
+/**
+ * Mostrar error en el análisis de problemas
+ */
+function showProblemsError(message) {
+    const container = document.getElementById('problemsContainer');
+    container.innerHTML = `
+        <div class="alert alert-danger">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <strong>Error:</strong> ${message}
+        </div>
+    `;
+}
+
 // Exportar funciones para uso global
 window.applyFilters = applyFilters;
 window.clearFilters = clearFilters;
 window.refreshCharts = refreshCharts;
+window.analyzeProblems = analyzeProblems;
+window.showSolutionDetails = showSolutionDetails;

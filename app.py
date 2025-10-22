@@ -252,12 +252,15 @@ class DataAnalyzer:
     
     def get_temporal_trends(self):
         """Obtener tendencias temporales"""
+        print("🔄 Obteniendo tendencias temporales...")
         if self.df is None:
+            print("⚠️ DataFrame es None")
             return {}
         
         try:
             # Verificar si existe la columna de fecha
             if 'Fecha del reporte' in self.df.columns:
+                print(f"✅ Columna 'Fecha del reporte' encontrada")
                 # Agrupar por mes
                 df_copy = self.df.copy()
                 df_copy['Mes'] = pd.to_datetime(df_copy['Fecha del reporte']).dt.to_period('M')
@@ -267,15 +270,19 @@ class DataAnalyzer:
                 months = [str(month) for month in monthly_data.index]
                 counts = monthly_data.values.tolist()
                 
+                print(f"📊 Datos temporales generados: {len(months)} meses, {sum(counts)} total reportes")
+                
                 return {
                     'months': months,
                     'counts': counts
                 }
             else:
+                print("⚠️ Columna 'Fecha del reporte' no encontrada, usando datos de ejemplo")
                 # Si no hay columna de fecha, crear datos de ejemplo
                 import numpy as np
                 months = ['2024-01', '2024-02', '2024-03', '2024-04', '2024-05', '2024-06']
                 counts = np.random.randint(50, 200, len(months))
+                print(f"📊 Datos de ejemplo generados: {len(months)} meses")
                 return {
                     'months': months,
                     'counts': counts.tolist()
