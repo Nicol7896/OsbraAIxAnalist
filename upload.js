@@ -103,19 +103,42 @@ function validateFile(file) {
     const allowedTypes = [
         'text/csv',
         'application/vnd.ms-excel',
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/csv',
+        'text/plain'
     ];
     
     const allowedExtensions = ['.csv', '.xlsx', '.xls'];
     const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
     
-    if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExtension)) {
+    // Validar extensión
+    if (!allowedExtensions.includes(fileExtension)) {
         showError('Tipo de archivo no soportado. Use CSV o Excel (.xlsx, .xls)');
         return false;
     }
     
+    // Validar tamaño
     if (file.size > 50 * 1024 * 1024) { // 50MB
         showError('El archivo es demasiado grande. Máximo 50MB');
+        return false;
+    }
+    
+    // Validar que no esté vacío
+    if (file.size === 0) {
+        showError('El archivo está vacío. Seleccione un archivo válido.');
+        return false;
+    }
+    
+    // Validar nombre del archivo
+    if (file.name.length > 255) {
+        showError('El nombre del archivo es demasiado largo. Use un nombre más corto.');
+        return false;
+    }
+    
+    // Validar caracteres especiales en el nombre
+    const invalidChars = /[<>:"/\\|?*]/;
+    if (invalidChars.test(file.name)) {
+        showError('El nombre del archivo contiene caracteres no válidos. Use solo letras, números y guiones.');
         return false;
     }
     
@@ -190,6 +213,10 @@ async function startAnalysis(file) {
             errorMessage = 'Formato de archivo no válido. Use archivos CSV o Excel (.xlsx, .xls).';
         } else if (error.message.includes('413')) {
             errorMessage = 'El archivo es demasiado grande. Máximo 50MB.';
+        } else if (error.message.includes('NetworkError') || error.message.includes('Failed to fetch')) {
+            errorMessage = 'Error de conexión. Verifique su conexión a internet e intente nuevamente.';
+        } else if (error.message.includes('timeout')) {
+            errorMessage = 'El archivo está tardando mucho en procesarse. Intente con un archivo más pequeño.';
         } else {
             errorMessage = `Error: ${error.message}`;
         }

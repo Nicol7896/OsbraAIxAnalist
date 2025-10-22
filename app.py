@@ -963,7 +963,7 @@ def api_custom_metrics(analysis_id):
         }), 500
 
 def process_uploaded_file(file_path):
-    """Procesar archivo subido"""
+    """Procesar archivo subido con mejor manejo de errores"""
     try:
         print(f"🔄 Procesando archivo: {file_path}")
         
@@ -983,22 +983,24 @@ def process_uploaded_file(file_path):
         # Detectar tipo de archivo y procesar
         if file_path.endswith('.csv'):
             print(f"📄 Procesando archivo CSV...")
-            try:
-                df = pd.read_csv(file_path, encoding='utf-8')
-            except UnicodeDecodeError:
-                print(f"⚠️ Error de codificación UTF-8, intentando con latin-1...")
-                df = pd.read_csv(file_path, encoding='latin-1')
+            df = process_csv_file(file_path)
         elif file_path.endswith(('.xlsx', '.xls')):
             print(f"📊 Procesando archivo Excel...")
-            df = pd.read_excel(file_path)
+            df = process_excel_file(file_path)
         else:
             print(f"❌ Tipo de archivo no soportado: {file_path}")
+            return None
+        
+        if df is None:
             return None
         
         # Verificar que el DataFrame no esté vacío
         if df.empty:
             print(f"❌ Archivo vacío después de procesar: {file_path}")
             return None
+        
+        # Normalizar columnas para compatibilidad
+        df = normalize_dataframe_columns(df)
         
         print(f"✅ Archivo procesado exitosamente: {len(df)} registros, {len(df.columns)} columnas")
         print(f"📋 Columnas detectadas: {list(df.columns)}")
@@ -1010,6 +1012,182 @@ def process_uploaded_file(file_path):
         import traceback
         traceback.print_exc()
         return None
+
+def process_csv_file(file_path):
+    """Procesar archivo CSV con múltiples intentos de codificación"""
+    encodings = ['utf-8', 'latin-1', 'cp1252', 'iso-8859-1', 'utf-16']
+    separators = [',', ';', '\t', '|']
+    
+    for encoding in encodings:
+        for separator in separators:
+            try:
+                print(f"🔄 Intentando con codificación: {encoding}, separador: '{separator}'")
+                df = pd.read_csv(file_path, encoding=encoding, sep=separator, low_memory=False)
+                
+                # Verificar que se leyeron datos válidos
+                if len(df.columns) > 1 and len(df) > 0:
+                    print(f"✅ CSV procesado exitosamente con {encoding} y separador '{separator}'")
+                    return df
+                    
+            except Exception as e:
+                print(f"⚠️ Error con {encoding} y separador '{separator}': {e}")
+                continue
+    
+    print(f"❌ No se pudo procesar el archivo CSV con ninguna combinación de codificación/separador")
+    return None
+
+def process_excel_file(file_path):
+    """Procesar archivo Excel"""
+    try:
+        # Intentar leer la primera hoja
+        df = pd.read_excel(file_path, engine='openpyxl')
+        return df
+    except Exception as e:
+        print(f"⚠️ Error con openpyxl, intentando con xlrd: {e}")
+        try:
+            df = pd.read_excel(file_path, engine='xlrd')
+            return df
+        except Exception as e2:
+            print(f"❌ Error procesando Excel: {e2}")
+            return None
+
+def normalize_dataframe_columns(df):
+    """Normalizar columnas del DataFrame para compatibilidad"""
+    try:
+        # Crear una copia del DataFrame
+        df_normalized = df.copy()
+        
+        # Mapeo de columnas comunes de datos.gov.co a formato esperado
+        column_mapping = {
+            # Mapeo de categorías
+            'CATEGORIA': 'Categoría del problema',
+            'CATEGORIA_PROBLEMA': 'Categoría del problema',
+            'TIPO_PROBLEMA': 'Categoría del problema',
+            'CLASIFICACION': 'Categoría del problema',
+            
+            # Mapeo de urgencia
+            'URGENCIA': 'Nivel de urgencia',
+            'NIVEL_URGENCIA': 'Nivel de urgencia',
+            'PRIORIDAD': 'Nivel de urgencia',
+            'ESTADO': 'Nivel de urgencia',
+            
+            # Mapeo de fechas
+            'FECHA_REPORTE': 'Fecha del reporte',
+            'FECHA': 'Fecha del reporte',
+            'FECHA_CREACION': 'Fecha del reporte',
+            'TIMESTAMP': 'Fecha del reporte',
+            
+            # Mapeo de ciudades
+            'CIUDAD': 'Ciudad',
+            'MUNICIPIO': 'Ciudad',
+            'LOCALIDAD': 'Ciudad',
+            
+            # Mapeo de descripciones
+            'DESCRIPCION_PROBLEMA': 'Comentario',
+            'DESCRIPCION': 'Comentario',
+            'COMENTARIOS': 'Comentario',
+            'DETALLE': 'Comentario',
+            'OBSERVACIONES': 'Comentario',
+            
+            # Mapeo de zonas
+            'ZONA_RURAL': 'Zona rural',
+            'RURAL': 'Zona rural',
+            'AREA_RURAL': 'Zona rural',
+            
+            # Mapeo de internet
+            'ACCESO_INTERNET': 'Acceso a internet',
+            'INTERNET': 'Acceso a internet',
+            'CONECTIVIDAD': 'Acceso a internet'
+        }
+        
+        # Aplicar mapeo de columnas
+        df_normalized = df_normalized.rename(columns=column_mapping)
+        
+        # Normalizar valores de urgencia
+        if 'Nivel de urgencia' in df_normalized.columns:
+            urgency_mapping = {
+                'Alta': 'Urgente',
+                'Media': 'No urgente',
+                'Baja': 'No urgente',
+                'Crítica': 'Urgente',
+                'Normal': 'No urgente',
+                'Emergencia': 'Urgente',
+                'Inmediata': 'Urgente'
+            }
+            df_normalized['Nivel de urgencia'] = df_normalized['Nivel de urgencia'].replace(urgency_mapping)
+        
+        # Normalizar valores de zona rural (convertir a 0/1)
+        if 'Zona rural' in df_normalized.columns:
+            rural_mapping = {
+                'Sí': 1, 'Si': 1, 'Yes': 1, 'True': 1, '1': 1,
+                'No': 0, 'False': 0, '0': 0
+            }
+            df_normalized['Zona rural'] = df_normalized['Zona rural'].replace(rural_mapping).fillna(0)
+        
+        # Normalizar valores de acceso a internet (convertir a 0/1)
+        if 'Acceso a internet' in df_normalized.columns:
+            internet_mapping = {
+                'Sí': 1, 'Si': 1, 'Yes': 1, 'True': 1, '1': 1,
+                'No': 0, 'False': 0, '0': 0
+            }
+            df_normalized['Acceso a internet'] = df_normalized['Acceso a internet'].replace(internet_mapping).fillna(1)
+        
+        # Si no existe columna de prioridad, calcularla
+        if 'Prioridad' not in df_normalized.columns:
+            df_normalized['Prioridad'] = calculate_priority_for_uploaded_data(df_normalized)
+        
+        # Limpiar datos nulos
+        df_normalized = df_normalized.fillna('')
+        
+        print(f"✅ Columnas normalizadas: {list(df_normalized.columns)}")
+        return df_normalized
+        
+    except Exception as e:
+        print(f"⚠️ Error normalizando columnas: {e}")
+        return df
+
+def calculate_priority_for_uploaded_data(df):
+    """Calcular prioridad para datos subidos"""
+    try:
+        priority_scores = []
+        
+        for _, row in df.iterrows():
+            score = 50  # Base score
+            
+            # Factor de urgencia
+            if 'Nivel de urgencia' in df.columns:
+                if str(row.get('Nivel de urgencia', '')).lower() in ['urgente', 'alta', 'crítica', 'emergencia']:
+                    score += 30
+            
+            # Factor de zona rural
+            if 'Zona rural' in df.columns:
+                if row.get('Zona rural', 0) == 1:
+                    score += 20
+            
+            # Factor de acceso a internet
+            if 'Acceso a internet' in df.columns:
+                if row.get('Acceso a internet', 1) == 0:
+                    score += 15
+            
+            # Factor de categoría
+            if 'Categoría del problema' in df.columns:
+                categoria = str(row.get('Categoría del problema', '')).lower()
+                if 'salud' in categoria:
+                    score += 10
+                elif 'seguridad' in categoria:
+                    score += 8
+                elif 'educación' in categoria or 'educacion' in categoria:
+                    score += 5
+            
+            # Asegurar que esté entre 20 y 100
+            score = max(20, min(100, score))
+            priority_scores.append(score)
+        
+        return priority_scores
+        
+    except Exception as e:
+        print(f"⚠️ Error calculando prioridad: {e}")
+        return [50] * len(df)
 
 def perform_custom_analysis(df, analysis_id):
     """Realizar análisis personalizado con IA"""
