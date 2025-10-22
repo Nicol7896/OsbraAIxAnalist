@@ -31,11 +31,15 @@ class DataAnalyzer:
             # Intentar cargar datos procesados
             if os.path.exists('dataset_procesado_huggingface.csv'):
                 self.df = pd.read_csv('dataset_procesado_huggingface.csv')
-                print(f"✅ Datos cargados: {len(self.df)} registros")
+                print(f"✅ Datos procesados cargados: {len(self.df)} registros")
             elif os.path.exists('dataset.csv'):
                 # Usar el dataset original si existe
                 self.df = pd.read_csv('dataset.csv')
                 print(f"✅ Dataset original cargado: {len(self.df)} registros")
+                # Procesar los datos para agregar columna de prioridad si no existe
+                if 'Prioridad' not in self.df.columns:
+                    self.df['Prioridad'] = self.calculate_priority()
+                    print("✅ Columna de prioridad calculada")
             else:
                 # Datos de ejemplo si no existe ningún archivo
                 self.df = self.create_sample_data()
@@ -63,6 +67,40 @@ class DataAnalyzer:
         }
         
         return pd.DataFrame(data)
+    
+    def calculate_priority(self):
+        """Calcular prioridad basada en urgencia, zona rural y acceso a internet"""
+        import numpy as np
+        
+        priority_scores = []
+        for _, row in self.df.iterrows():
+            score = 50  # Base score
+            
+            # Urgencia
+            if row['Nivel de urgencia'] == 'Urgente':
+                score += 30
+            
+            # Zona rural (mayor prioridad)
+            if row['Zona rural'] == 1:
+                score += 20
+            
+            # Sin acceso a internet (mayor prioridad)
+            if row['Acceso a internet'] == 0:
+                score += 15
+            
+            # Categoría del problema
+            if row['Categoría del problema'] == 'Salud':
+                score += 10
+            elif row['Categoría del problema'] == 'Seguridad':
+                score += 8
+            elif row['Categoría del problema'] == 'Educación':
+                score += 5
+            
+            # Asegurar que esté entre 20 y 100
+            score = max(20, min(100, score))
+            priority_scores.append(score)
+        
+        return priority_scores
     
     def get_dashboard_metrics(self):
         """Obtener métricas principales para el dashboard"""
@@ -111,9 +149,19 @@ class DataAnalyzer:
         if self.df is None:
             return []
         
-        # Ordenar por prioridad descendente
-        sorted_df = self.df.sort_values('Prioridad', ascending=False)
-        return sorted_df.head(limit).to_dict('records')
+        try:
+            # Verificar si existe la columna Prioridad, si no, calcularla
+            if 'Prioridad' not in self.df.columns:
+                print("⚠️ Columna Prioridad no encontrada, calculando...")
+                self.df['Prioridad'] = self.calculate_priority()
+            
+            # Ordenar por prioridad descendente
+            sorted_df = self.df.sort_values('Prioridad', ascending=False)
+            return sorted_df.head(limit).to_dict('records')
+        except Exception as e:
+            print(f"❌ Error en get_priority_cases: {e}")
+            # Si hay error, devolver los primeros registros sin ordenar
+            return self.df.head(limit).to_dict('records')
     
     def get_temporal_trends(self):
         """Obtener tendencias temporales"""
@@ -156,12 +204,15 @@ def dashboard():
 def api_metrics():
     """API para obtener métricas del dashboard"""
     try:
+        print("📊 Obteniendo métricas del dashboard...")
         metrics = analyzer.get_dashboard_metrics()
+        print(f"✅ Métricas obtenidas: {metrics}")
         return jsonify({
             'success': True,
             'data': metrics
         })
     except Exception as e:
+        print(f"❌ Error en API metrics: {e}")
         return jsonify({
             'success': False,
             'error': str(e)
@@ -171,12 +222,15 @@ def api_metrics():
 def api_category_distribution():
     """API para distribución por categorías"""
     try:
+        print("📊 Obteniendo distribución por categorías...")
         data = analyzer.get_category_distribution()
+        print(f"✅ Distribución categorías: {data}")
         return jsonify({
             'success': True,
             'data': data
         })
     except Exception as e:
+        print(f"❌ Error en API category-distribution: {e}")
         return jsonify({
             'success': False,
             'error': str(e)
@@ -202,12 +256,15 @@ def api_priority_cases():
     """API para casos prioritarios"""
     try:
         limit = request.args.get('limit', 20, type=int)
+        print(f"📊 Obteniendo {limit} casos prioritarios...")
         data = analyzer.get_priority_cases(limit)
+        print(f"✅ Casos prioritarios obtenidos: {len(data)} registros")
         return jsonify({
             'success': True,
             'data': data
         })
     except Exception as e:
+        print(f"❌ Error en API priority-cases: {e}")
         return jsonify({
             'success': False,
             'error': str(e)

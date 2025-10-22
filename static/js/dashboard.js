@@ -60,16 +60,21 @@ async function loadDashboardData() {
  */
 async function loadMetrics() {
     try {
+        console.log('🔄 Cargando métricas...');
         const response = await fetch('/api/metrics');
+        
+        console.log('📡 Respuesta de métricas:', response.status, response.statusText);
         
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         
         const data = await response.json();
+        console.log('📊 Datos de métricas recibidos:', data);
         
         if (data.success) {
             const metrics = data.data;
+            console.log('✅ Métricas procesadas:', metrics);
             
             document.getElementById('total-casos').textContent = formatNumber(metrics.total_casos || 0);
             document.getElementById('casos-urgentes').textContent = formatNumber(metrics.casos_urgentes || 0);
@@ -82,15 +87,15 @@ async function loadMetrics() {
             throw new Error(data.error || 'Error desconocido en métricas');
         }
     } catch (error) {
-        console.error('Error cargando métricas:', error);
+        console.error('❌ Error cargando métricas:', error);
         // Mostrar valores por defecto en caso de error
-        document.getElementById('total-casos').textContent = '0';
-        document.getElementById('casos-urgentes').textContent = '0';
-        document.getElementById('porcentaje-urgentes').textContent = '0%';
-        document.getElementById('zona-rural').textContent = '0';
-        document.getElementById('porcentaje-rural').textContent = '0%';
-        document.getElementById('sin-internet').textContent = '0';
-        document.getElementById('porcentaje-sin-internet').textContent = '0%';
+        document.getElementById('total-casos').textContent = 'Error';
+        document.getElementById('casos-urgentes').textContent = 'Error';
+        document.getElementById('porcentaje-urgentes').textContent = 'Error';
+        document.getElementById('zona-rural').textContent = 'Error';
+        document.getElementById('porcentaje-rural').textContent = 'Error';
+        document.getElementById('sin-internet').textContent = 'Error';
+        document.getElementById('porcentaje-sin-internet').textContent = 'Error';
     }
 }
 
@@ -275,20 +280,38 @@ async function loadTemporalChart() {
  */
 async function loadPriorityCases() {
     try {
+        console.log('🔄 Cargando casos prioritarios...');
         const response = await fetch('/api/priority-cases?limit=20');
+        
+        console.log('📡 Respuesta de casos prioritarios:', response.status, response.statusText);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const data = await response.json();
+        console.log('📊 Datos de casos prioritarios recibidos:', data);
         
         if (data.success) {
             const cases = data.data;
+            console.log('✅ Casos prioritarios procesados:', cases.length, 'registros');
             
             // Actualizar lista de casos prioritarios
             updatePriorityCasesList(cases);
             
             // Actualizar tabla
             updatePriorityTable(cases);
+        } else {
+            throw new Error(data.error || 'Error desconocido en casos prioritarios');
         }
     } catch (error) {
-        console.error('Error cargando casos prioritarios:', error);
+        console.error('❌ Error cargando casos prioritarios:', error);
+        // Mostrar mensaje de error en las tablas
+        const container = document.getElementById('priority-cases');
+        container.innerHTML = '<div class="error-message">Error cargando casos prioritarios</div>';
+        
+        const tbody = document.getElementById('priority-table');
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center error-message">Error cargando datos</td></tr>';
     }
 }
 
