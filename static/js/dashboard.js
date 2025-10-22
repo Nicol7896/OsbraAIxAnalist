@@ -290,7 +290,7 @@ async function loadTemporalChart() {
                         }
                     },
                     y: {
-                        title: {
+                title: {
                             display: true,
                             text: 'Número de Reportes',
                             font: {
@@ -1063,6 +1063,52 @@ function showError(message) {
 function formatNumber(num) {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
+
+/**
+ * Actualizar dashboard completo
+ */
+function refreshDashboard() {
+    console.log('🔄 Actualizando dashboard...');
+    
+    // Mostrar indicador de carga
+    showLoadingState();
+    
+    // Recargar todos los datos
+    loadDashboardData().finally(() => {
+        hideLoadingState();
+        console.log('✅ Dashboard actualizado exitosamente');
+        
+        // Mostrar mensaje de éxito
+        showSuccessMessage('Dashboard actualizado correctamente');
+    });
+}
+
+/**
+ * Mostrar mensaje de éxito
+ */
+function showSuccessMessage(message) {
+    // Crear o actualizar mensaje de éxito
+    let successDiv = document.getElementById('success-message');
+    if (!successDiv) {
+        successDiv = document.createElement('div');
+        successDiv.id = 'success-message';
+        successDiv.className = 'alert alert-success mt-3';
+        document.querySelector('.container-fluid').insertBefore(successDiv, document.querySelector('.filter-section'));
+    }
+    
+    successDiv.innerHTML = `
+        <i class="fas fa-check-circle"></i> ${message}
+    `;
+    successDiv.style.display = 'block';
+    
+    // Ocultar después de 3 segundos
+    setTimeout(() => {
+        successDiv.style.display = 'none';
+    }, 3000);
+}
+
+// Exportar función para uso global
+window.refreshDashboard = refreshDashboard;
 
 /**
  * Actualizar gráficos cuando cambien los datos

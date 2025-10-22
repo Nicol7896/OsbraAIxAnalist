@@ -241,6 +241,12 @@ function showAnalysisPreview(data) {
     
     // Mostrar métricas
     const previewMetrics = document.getElementById('previewMetrics');
+    // Obtener datos del análisis
+    const urgencyAnalysis = data.urgency_analysis || {};
+    const sentimentAnalysis = data.sentiment_analysis || {};
+    const priorityAnalysis = data.priority_analysis || {};
+    const dataQuality = data.data_quality || {};
+    
     previewMetrics.innerHTML = `
         <div class="col-md-6">
             <div class="metric-card">
@@ -258,7 +264,7 @@ function showAnalysisPreview(data) {
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <h6 class="mb-1">Categorías Detectadas</h6>
-                        <h3>${data.categories_detected || 0}</h3>
+                        <h3>${data.categories_analysis?.total_categories || 0}</h3>
                     </div>
                     <i class="fas fa-tags fa-2x"></i>
                 </div>
@@ -269,7 +275,8 @@ function showAnalysisPreview(data) {
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <h6 class="mb-1">Casos Urgentes</h6>
-                        <h3>${formatNumber(data.urgent_cases || 0)}</h3>
+                        <h3>${formatNumber(urgencyAnalysis.urgent_cases || 0)}</h3>
+                        <small>${urgencyAnalysis.urgency_percentage || 0}% del total</small>
                     </div>
                     <i class="fas fa-exclamation-triangle fa-2x"></i>
                 </div>
@@ -281,8 +288,31 @@ function showAnalysisPreview(data) {
                     <div>
                         <h6 class="mb-1">Precisión IA</h6>
                         <h3>${data.ai_accuracy || 0}%</h3>
+                        <small>Calidad: ${dataQuality.quality_score || 0}%</small>
                     </div>
                     <i class="fas fa-brain fa-2x"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="metric-card" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-1">Casos Positivos</h6>
+                        <h3>${formatNumber(sentimentAnalysis.positive_cases || 0)}</h3>
+                    </div>
+                    <i class="fas fa-smile fa-2x"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="metric-card" style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-1">Alta Prioridad</h6>
+                        <h3>${formatNumber(priorityAnalysis.high_priority || 0)}</h3>
+                    </div>
+                    <i class="fas fa-star fa-2x"></i>
                 </div>
             </div>
         </div>
